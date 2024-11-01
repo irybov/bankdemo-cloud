@@ -22,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
@@ -53,15 +54,17 @@ class OperationJDBCTest {
 	//@Execution(ExecutionMode.CONCURRENT)
 	@ParameterizedTest
 	@MethodSource("params")
-	void test_findAllBySpecs(int id, String action, Double minval, Double maxval,
+	void test_findAllByFilters(int id, String action, Double minval, Double maxval,
 			OffsetDateTime mindate, OffsetDateTime maxdate, int quantity) {
 		
 		OperationPage page = new OperationPage();
 		Pageable pageable = PageRequest.of(page.getPageNumber(), page.getPageSize(),
 				page.getSortDirection(), page.getSortBy());
 		
-		Timestamp dawn = Timestamp.valueOf(mindate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
-		Timestamp dusk = Timestamp.valueOf(maxdate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+		Timestamp dawn = null;
+		if(mindate != null) dawn = Timestamp.valueOf(mindate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+		Timestamp dusk = null;
+		if(maxdate != null) dusk = Timestamp.valueOf(maxdate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
 /*		
 		Predicate or = QPredicate.builder()
 				.add(id, QOperations.operations.sender::eq)
@@ -74,16 +77,25 @@ class OperationJDBCTest {
 				.buildAnd();
 		Predicate where = ExpressionUtils.allOf(or, and);		
 //		Page<Operation> resultPage = operationJDBC.findAll(where, pageable);
-*/		
+*/
+		List<String> orders = new ArrayList<>();
+		Sort sort = pageable.getSort();
+		sort.iterator().forEachRemaining(order -> orders.add(order.getProperty() + " " + order.getDirection().name()));
+		String orderBy = String.join(", ", orders);
+		
 		List<String> parts = new ArrayList<>();
 		String select = 
 				String.format("SELECT * FROM bankdemo.operations WHERE (sender = %d OR recipient = %d)", id, id);
 		parts.add(select);
 		if(action != null) parts.add(String.format("AND action LIKE %s", "'"+action+"'"));
 		if(minval != null && maxval != null) parts.add(String.format("AND amount BETWEEN %.2f AND %.2f", minval, maxval).replace(',', '.'));
+		else if(minval != null) parts.add(String.format("AND amount >= %.2f", minval).replace(',', '.'));
+		else if(maxval != null) parts.add(String.format("AND amount <= %.2f", maxval).replace(',', '.'));
 		if(dawn != null && dusk != null)  parts.add(String.format("AND created_at BETWEEN %s AND %s", "'"+dawn+"'", "'"+dusk+"'"));
+		else if(dawn != null) parts.add(String.format("AND created_at >= %s", "'"+dawn+"'"));
+		else if(dusk != null) parts.add(String.format("AND created_at <= %s", "'"+dusk+"'"));
 		String paging = 
-				String.format("ORDER BY %s %s LIMIT %d OFFSET %d", "id", "DESC", pageable.getPageSize(), pageable.getOffset());
+				String.format("ORDER BY %s LIMIT %d OFFSET %d", orderBy, pageable.getPageSize(), pageable.getOffset());
 		parts.add(paging);
 		
 		String query = String.join(" ", parts);
@@ -96,10 +108,19 @@ class OperationJDBCTest {
 		assertThat(count).isEqualTo(6);		
 	}
 	private static Stream<Arguments> params() {
-		return Stream.of(Arguments.of(1, "deposit",  100.00, 700.00,
-				OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 1),
-				Arguments.of(2, "transfer",  200.00, 900.00,
-						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 2));
+		return Stream.of(
+				Arguments.of(1, "deposit", 100.00, 700.00,
+						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 1),
+				Arguments.of(2, "transfer", 200.00, 900.00,
+						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 2),
+				Arguments.of(3, null, null, null, 
+						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 3),
+				Arguments.of(3, null, 500.00, null, null, null, 2),
+				Arguments.of(3, null, null, 700.00, null, null, 2),
+				Arguments.of(0, null, null, null, OffsetDateTime.now().plusDays(1L), null, 0),
+				Arguments.of(0, null, null, null, null, OffsetDateTime.now().minusDays(1L), 0),
+				Arguments.of(0, null, null, null, null, null, 4)
+			);
 	}
 
 	@Test

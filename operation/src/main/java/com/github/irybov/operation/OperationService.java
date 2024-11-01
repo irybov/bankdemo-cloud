@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
@@ -84,8 +85,10 @@ public class OperationService {
 	public Page<Operation> getPage(int id, String action, Double minval, Double maxval,
 			OffsetDateTime mindate, OffsetDateTime maxdate, Pageable pageable){
 		
-		Timestamp dawn = Timestamp.valueOf(mindate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
-		Timestamp dusk = Timestamp.valueOf(maxdate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+		Timestamp dawn = null;
+		if(mindate != null) dawn = Timestamp.valueOf(mindate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+		Timestamp dusk = null;
+		if(maxdate != null) dusk = Timestamp.valueOf(maxdate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
 /*		
 		Predicate or = QPredicate.builder()
 				.add(id, QOperations.operations.sender::eq)
@@ -99,15 +102,24 @@ public class OperationService {
 		Predicate where = ExpressionUtils.allOf(or, and);		
 //		return operationJDBC.findAll(where, pageable);
 */		
+		List<String> orders = new ArrayList<>();
+		Sort sort = pageable.getSort();
+		sort.iterator().forEachRemaining(order -> orders.add(order.getProperty() + " " + order.getDirection().name()));
+		String orderBy = String.join(", ", orders);
+		
 		List<String> parts = new ArrayList<>();
 		String select = 
 				String.format("SELECT * FROM bankdemo.operations WHERE (sender = %d OR recipient = %d)", id, id);
 		parts.add(select);
 		if(action != null) parts.add(String.format("AND action LIKE %s", "'"+action+"'"));
 		if(minval != null && maxval != null) parts.add(String.format("AND amount BETWEEN %.2f AND %.2f", minval, maxval).replace(',', '.'));
+		else if(minval != null) parts.add(String.format("AND amount >= %.2f", minval).replace(',', '.'));
+		else if(maxval != null) parts.add(String.format("AND amount <= %.2f", maxval).replace(',', '.'));
 		if(dawn != null && dusk != null)  parts.add(String.format("AND created_at BETWEEN %s AND %s", "'"+dawn+"'", "'"+dusk+"'"));
+		else if(dawn != null) parts.add(String.format("AND created_at >= %s", "'"+dawn+"'"));
+		else if(dusk != null) parts.add(String.format("AND created_at <= %s", "'"+dusk+"'"));
 		String paging = 
-				String.format("ORDER BY %s %s LIMIT %d OFFSET %d", "id", "DESC", pageable.getPageSize(), pageable.getOffset());
+				String.format("ORDER BY %s LIMIT %d OFFSET %d", orderBy, pageable.getPageSize(), pageable.getOffset());
 		parts.add(paging);
 		
 		String query = String.join(" ", parts);

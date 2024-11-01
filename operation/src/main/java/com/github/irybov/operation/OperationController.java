@@ -9,6 +9,8 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.SortDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,7 +50,7 @@ public class OperationController {
 			@RequestParam(required = false) Double minval, 
 			@RequestParam(required = false) Double maxval,
 			@RequestParam(required = false) String action, 
-			Pageable pageable){
+			@SortDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
 		
 		OffsetDateTime dateFrom = null;
 		OffsetDateTime dateTo = null;

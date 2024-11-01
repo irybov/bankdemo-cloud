@@ -95,7 +95,7 @@ class OperationServiceTest {
 	@Test
 	void can_get_list() {
 		
-		final byte size = (byte) new Random().nextInt(Byte.MAX_VALUE + 1);
+		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<Operation> operations = Stream.generate(Operation::new)
 				.limit(size)
 				.collect(Collectors.toList());
@@ -114,13 +114,13 @@ class OperationServiceTest {
 	@Test
 	void can_get_page() {
 		
-		final byte size = (byte) new Random().nextInt(Byte.MAX_VALUE + 1);
+		final long size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<Operation> operations = Stream.generate(Operation::new)
 				.limit(size)
 				.collect(Collectors.toList());			
 		Page<Operation> result = new PageImpl<Operation>(operations);
 		when(jdbcTemplate.query(anyString(), any(BeanPropertyRowMapper.class))).thenReturn(operations);
-		when(operationJDBC.count()).thenReturn((long)size);
+		when(operationJDBC.count()).thenReturn(size);
 
 		final int id = new Random().nextInt();
 		final double value = new Random().nextDouble();
@@ -131,6 +131,7 @@ class OperationServiceTest {
 		Page<Operation> dtos = operationService.getPage(id, "^[a-z]{7,8}", value, value,
 				OffsetDateTime.of(LocalDate.parse("1900-01-01"), LocalTime.MIN, ZoneOffset.UTC), 
 				OffsetDateTime.now(), pageable);
+		
 		assertThat(dtos)
 			.hasSameClassAs(new PageImpl<Operation>(new ArrayList<Operation>()));
 		assertThat(dtos.getContent().size()).isEqualTo(size);

@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -53,7 +52,7 @@ class OperationControllerTest {
 	@Autowired
 	private ObjectMapper mapper;
 	
-	private static Operation operation;	
+	private static Operation operation;
 //	private static Operation.OperationBuilder builder;
 	
 	@BeforeAll
@@ -106,7 +105,7 @@ class OperationControllerTest {
 	@Test
 	void can_get_list() throws Exception {
 		
-		final byte size = (byte) new Random().nextInt(Byte.MAX_VALUE + 1);
+		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<Operation> operations = Stream.generate(Operation::new)
 				.limit(size)
 				.collect(Collectors.toList());
@@ -116,6 +115,7 @@ class OperationControllerTest {
 		.andExpect(status().isOk())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.length()").value(size))
 		.andReturn();
 		
 		String json = result.getResponse().getContentAsString();
@@ -146,12 +146,14 @@ class OperationControllerTest {
 						.param("maxval", "0.02")
 						.param("mindate", "1900-01-01")
 						.param("maxdate", "2020-01-01")
+						.param("sort", "amount,asc")
+						.param("sort", "id,desc")
 				)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.pageable").exists())
 			.andExpect(jsonPath("$.sort").exists())
 			.andExpect(jsonPath("$.content").isArray())
-			.andExpect(jsonPath("$.content").isNotEmpty());
+			.andExpect(jsonPath("$.content.length()").value(operations.size()));
 		
 		verify(service).getPage(anyInt(), anyString(), anyDouble(), anyDouble(),
 				any(OffsetDateTime.class), any(OffsetDateTime.class), any(Pageable.class));
