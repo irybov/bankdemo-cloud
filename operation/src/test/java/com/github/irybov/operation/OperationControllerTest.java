@@ -94,7 +94,7 @@ class OperationControllerTest {
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 //		.andExpect(jsonPath("$.id").exists())
 		.andExpect(jsonPath("$.createdAt").exists())
-		.andExpect(jsonPath("$.amount").value("0.0"))
+		.andExpect(jsonPath("$.amount").value(0.00))
 		.andExpect(jsonPath("$.action").value("external"))
 		.andExpect(jsonPath("$.bank").value("Demo"))
 		.andExpect(jsonPath("$.currency").value("SEA"));
@@ -140,7 +140,7 @@ class OperationControllerTest {
 				any(OffsetDateTime.class), any(OffsetDateTime.class), any(Pageable.class)))
 				.thenReturn(operationPage);
 		
-		mockMVC.perform(get("/operations/{id}/page", "0")
+		mockMVC.perform(get("/operations/{id}/pageable", "0")
 						.param("action", "unknown")
 						.param("minval", "0.01")
 						.param("maxval", "0.02")
@@ -148,6 +148,8 @@ class OperationControllerTest {
 						.param("maxdate", "2020-01-01")
 						.param("sort", "amount,asc")
 						.param("sort", "id,desc")
+						.param("page", "0")
+						.param("size", "0")
 				)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.pageable").exists())
