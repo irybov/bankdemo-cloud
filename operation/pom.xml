@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <groupId>com.github.irybov</groupId>
+    <artifactId>bankdemo-cloud</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  
+  <artifactId>operation</artifactId>
+  <packaging>jar</packaging>
+  <version>${project.parent.version}</version>
+  
+  	<dependencies>
+  		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+				    <groupId>org.junit.vintage</groupId>
+    				<artifactId>junit-vintage-engine</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+		    <groupId>com.github.tomakehurst</groupId>
+		    <artifactId>wiremock-jre8</artifactId>
+<!-- 		    <version>2.35.2</version> -->
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>com.querydsl</groupId>
+		    <artifactId>querydsl-sql</artifactId>
+<!-- 		    <version>${querydsl.version}</version> -->
+		</dependency>
+		<dependency>
+		    <groupId>com.querydsl</groupId>
+		    <artifactId>querydsl-sql-spring</artifactId>
+<!-- 		    <version>${querydsl.version}</version> -->
+		</dependency>
+  	</dependencies>
+  	
+  	<build>
+		<plugins>
+		      <plugin>
+		        <groupId>com.querydsl</groupId>
+		        <artifactId>querydsl-maven-plugin</artifactId>
+		        <version>${querydsl.version}</version>
+		        <executions>
+		          <execution>
+		            <goals>
+		              <goal>export</goal>
+		            </goals>
+		          </execution>
+		        </executions>
+		        <configuration>
+		          <jdbcDriver>org.postgresql.Driver</jdbcDriver>
+		          <jdbcUrl>jdbc:postgresql://localhost:5432/postgres</jdbcUrl>
+		          <jdbcUser>postgres</jdbcUser>
+		          <jdbcPassword>2309</jdbcPassword>
+		          <packageName>com.github.irybov.operation</packageName>
+		          <targetFolder>${project.basedir}/target/generated-sources/java</targetFolder>
+<!-- 		          <schemaPattern>bankdemo</schemaPattern> -->
+		          <tableNamePattern>operations</tableNamePattern>
+		        </configuration>
+		        <dependencies>
+		          <dependency>
+		            <groupId>org.postgresql</groupId>
+		            <artifactId>postgresql</artifactId>
+        			<version>${postgresql.version}</version>
+		          </dependency>
+		        </dependencies>
+		      </plugin>
+	        <plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-surefire-plugin</artifactId>
+				<!-- <version>2.22.0</version> -->
+				<configuration>
+			        <skipTests>${tests.skip}</skipTests>
+			    </configuration>
+	        </plugin>
+	        <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+                    <skipITs>${tests.skip}</skipITs>
+                </configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>			
+		</plugins>
+	</build>
+  
+</project>

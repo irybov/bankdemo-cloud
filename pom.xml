@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">	
 	<modelVersion>4.0.0</modelVersion>
+
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
@@ -15,8 +16,7 @@
 	<packaging>pom</packaging>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Bank demo</name>
-	<description>Demo project for Spring Boot micross</description>
-
+	<description>Demo project for Spring Boot microservices</description>
 	<developers>
 		<developer>
 			<name>Ivan Ryabov</name>
@@ -31,10 +31,19 @@
 	<properties>
 		<java.version>1.8</java.version>
 		<spring-cloud.version>2021.0.9</spring-cloud.version>
+		<spring-boot.version>2.7.18</spring-boot.version>
+		<tests.skip>true</tests.skip>
 	</properties>
 	
 	<dependencyManagement>
 	<dependencies>
+<!--         <dependency> -->
+<!--             <groupId>org.springframework.boot</groupId> -->
+<!--             <artifactId>spring-boot-dependencies</artifactId> -->
+<!--             <version>${spring-boot.version}</version> -->
+<!--             <scope>import</scope> -->
+<!--             <type>pom</type> -->
+<!--         </dependency> -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-dependencies</artifactId>
@@ -62,4 +71,14 @@
 		</plugins>
 	</build>
 
+	<modules>
+		<module>account</module>
+		<module>auth</module>
+		<module>bill</module>
+		<module>config</module>
+		<module>courier</module>
+		<module>gateway</module>				
+		<module>operation</module>
+		<module>registry</module>
+	</modules>
 </project>

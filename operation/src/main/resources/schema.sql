@@ -1,0 +1,11 @@
+CREATE SCHEMA IF NOT EXISTS bankdemo;
+CREATE TABLE IF NOT EXISTS bankdemo.operations(
+	id BIGSERIAL PRIMARY KEY,
+	created_at TIMESTAMP NOT NULL,
+	amount DOUBLE PRECISION NOT NULL,
+	action VARCHAR(10) NOT NULL,
+	currency VARCHAR(3) NOT NULL CONSTRAINT currencychk CHECK (CHAR_LENGTH(currency) = 3),
+	sender INTEGER,
+	recipient INTEGER,
+	bank VARCHAR(30) NOT NULL
+);
