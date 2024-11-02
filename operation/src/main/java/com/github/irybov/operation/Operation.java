@@ -12,17 +12,19 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@Setter
 @Table(schema="bankdemo", name="operations")
 @ToString
 public class Operation {
 	
-	@EqualsAndHashCode.Exclude
+//	@EqualsAndHashCode.Exclude
 	@Id
 	@Column("id")
 	private Long id;

@@ -2,7 +2,15 @@ package com.github.irybov.operation;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.support.PageJacksonModule;
+import org.springframework.cloud.openfeign.support.SortJacksonModule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 @SpringBootApplication
 //@EnableJdbcRepositories
@@ -12,4 +20,13 @@ public class App
     {
     	SpringApplication.run(App.class, args);
     }
+    
+    @Bean
+    @Primary
+    public ObjectMapper objectMapper() {
+        return JsonMapper.builder()
+      		  .addModule(new PageJacksonModule())
+      		  .addModule(new SortJacksonModule())
+      		  .build();
+    }    
 }
