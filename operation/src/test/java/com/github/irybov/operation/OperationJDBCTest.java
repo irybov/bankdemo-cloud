@@ -10,6 +10,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -29,6 +31,12 @@ import org.springframework.test.context.jdbc.Sql;
 
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.sql.Configuration;
+import com.querydsl.sql.PostgreSQLTemplates;
+import com.querydsl.sql.SQLQueryFactory;
+import com.querydsl.sql.SQLTemplates;
+import com.querydsl.sql.spring.SpringConnectionProvider;
+import com.querydsl.sql.spring.SpringExceptionTranslator;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Sql("/test-operations-h2.sql")
@@ -39,6 +47,8 @@ class OperationJDBCTest {
 	private OperationJDBC operationJDBC;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private DataSource dataSource;
 	
 	@ParameterizedTest
 	@CsvSource({"1, 1, 3", "2, 2, 2", "3, 3, 3"})
@@ -65,6 +75,12 @@ class OperationJDBCTest {
 		if(mindate != null) dawn = Timestamp.valueOf(mindate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
 		Timestamp dusk = null;
 		if(maxdate != null) dusk = Timestamp.valueOf(maxdate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+
+		SQLTemplates templates = new PostgreSQLTemplates();
+		Configuration configuration = new Configuration(templates);
+		configuration.setExceptionTranslator(new SpringExceptionTranslator());
+		SpringConnectionProvider provider = new SpringConnectionProvider(dataSource);
+		SQLQueryFactory queryFactory = new SQLQueryFactory(configuration, provider);
 /*		
 		Predicate or = QPredicate.builder()
 				.add(id, QOperations.operations.sender::eq)

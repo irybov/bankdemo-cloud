@@ -62,7 +62,7 @@ class AppIT {
 	private TestRestTemplate restTemplate;
 	
 	@Autowired
-	private DataSource dataSource;	
+	private DataSource dataSource;
 	private ResourceDatabasePopulator populator;
 	
 	@BeforeAll
@@ -188,15 +188,17 @@ class AppIT {
 */
         String url = "http://localhost:8888/operations/1/pageable";
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(url)
-          .queryParam("sort", "amount,asc")
-          .queryParam("sort", "id,desc")
-          .queryParam("page", 0)
-          .queryParam("size", 2);
+	        .queryParam("minval", 99.99)
+	        .queryParam("maxval", 500.01)
+	        .queryParam("sort", "amount,asc")
+	        .queryParam("sort", "id,desc")
+	        .queryParam("page", 1)
+	        .queryParam("size", 2);
 		
         ResponseEntity<Page<Operation>> response = restTemplate.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET, null, new ParameterizedTypeReference<Page<Operation>>(){});
         assertThat(response.getStatusCode(), is(HttpStatus.OK));
-        assertThat(response.getBody().getContent().size(), is(2));
+        assertThat(response.getBody().getContent().size(), is(1));
 	}
 
 //	@AfterAll void clear() {populator = null;}
