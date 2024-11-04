@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -120,7 +121,8 @@ class OperationServiceTest {
 				.collect(Collectors.toList());			
 		Page<Operation> result = new PageImpl<Operation>(operations);
 		when(jdbcTemplate.query(anyString(), any(BeanPropertyRowMapper.class))).thenReturn(operations);
-		when(operationJDBC.count()).thenReturn(size);
+//		when(operationJDBC.count()).thenReturn(size);
+		when(jdbcTemplate.queryForObject(anyString(), eq(Long.class))).thenReturn(size);
 
 		final int id = new Random().nextInt();
 		final double value = new Random().nextDouble();
@@ -128,7 +130,7 @@ class OperationServiceTest {
 		Pageable pageable = PageRequest.of(page.getPageNumber(), page.getPageSize(),
 				   page.getSortDirection(), page.getSortBy());
 		
-		Page<Operation> dtos = operationService.getPage(id, "^[a-z]{7,8}", value, value,
+		Page<Operation> dtos = operationService.getPage(id, "unknown", value, value,
 				OffsetDateTime.of(LocalDate.parse("1900-01-01"), LocalTime.MIN, ZoneOffset.UTC), 
 				OffsetDateTime.now(), pageable);
 		
@@ -136,7 +138,8 @@ class OperationServiceTest {
 			.hasSameClassAs(new PageImpl<Operation>(new ArrayList<Operation>()));
 		assertThat(dtos.getContent().size()).isEqualTo(size);
 		verify(jdbcTemplate).query(anyString(), any(BeanPropertyRowMapper.class));
-		verify(operationJDBC).count();
+//		verify(operationJDBC).count();
+		verify(jdbcTemplate).queryForObject(anyString(), eq(Long.class));
 	}
 	
 	@Test

@@ -72,12 +72,17 @@ class OperationJDBCTest {
 				.buildOr();
 		Predicate and = QPredicate.builder()
 				.add(action, QOperations.operations.action::like)
-				.add(minval, maxval, QOperations.operations.amount::between)
-				.add(dawn, dusk, QOperations.operations.createdAt::between)
+//				.add(minval, maxval, QOperation.operation.amount::between)
+				.add(minval, QOperations.operations.amount::goe)
+				.add(maxval, QOperations.operations.amount::loe)
+//				.add(mindate, maxdate, QOperation.operation.createdAt::between)
+				.add(dawn, QOperations.operations.createdAt::goe)
+				.add(dusk, QOperations.operations.createdAt::loe)
 				.buildAnd();
-		Predicate where = ExpressionUtils.allOf(or, and);		
+		Predicate where = ExpressionUtils.allOf(or, and);
+*/	
 //		Page<Operation> resultPage = operationJDBC.findAll(where, pageable);
-*/
+
 		List<String> orders = new ArrayList<>();
 		Sort sort = pageable.getSort();
 		sort.iterator().forEachRemaining(order -> orders.add(order.getProperty() + " " + order.getDirection().name()));
@@ -87,25 +92,44 @@ class OperationJDBCTest {
 		String select = 
 				String.format("SELECT * FROM bankdemo.operations WHERE (sender = %d OR recipient = %d)", id, id);
 		parts.add(select);
-		if(action != null) parts.add(String.format("AND action LIKE %s", "'"+action+"'"));
-		if(minval != null && maxval != null) parts.add(String.format("AND amount BETWEEN %.2f AND %.2f", minval, maxval).replace(',', '.'));
-		else if(minval != null) parts.add(String.format("AND amount >= %.2f", minval).replace(',', '.'));
-		else if(maxval != null) parts.add(String.format("AND amount <= %.2f", maxval).replace(',', '.'));
-		if(dawn != null && dusk != null)  parts.add(String.format("AND created_at BETWEEN %s AND %s", "'"+dawn+"'", "'"+dusk+"'"));
-		else if(dawn != null) parts.add(String.format("AND created_at >= %s", "'"+dawn+"'"));
-		else if(dusk != null) parts.add(String.format("AND created_at <= %s", "'"+dusk+"'"));
+		filtering(parts, action, minval, maxval, dawn, dusk);
 		String paging = 
 				String.format("ORDER BY %s LIMIT %d OFFSET %d", orderBy, pageable.getPageSize(), pageable.getOffset());
-		parts.add(paging);
-		
+		parts.add(paging);		
 		String query = String.join(" ", parts);
 		List<Operation> operations = jdbcTemplate.query(query, BeanPropertyRowMapper.newInstance(Operation.class));
-		long count = operationJDBC.count();
-		Page<Operation> resultPage = new PageImpl<>(operations, pageable, count);
+		
+		parts.clear();
+		String count = 
+				String.format("SELECT COUNT(*) FROM bankdemo.operations WHERE (sender = %d OR recipient = %d)", id, id);
+		parts.add(count);
+		filtering(parts, action, minval, maxval, dawn, dusk);
+		query = new String(String.join(" ", parts));		
+//		long total = operationJDBC.count();
+		Long total = jdbcTemplate.queryForObject(query, Long.class);
+		Page<Operation> resultPage = new PageImpl<>(operations, pageable, total);
 		
 		assertThat(operations.size()).isEqualTo(quantity);		
 		assertThat(resultPage.getContent().size()).isEqualTo(quantity);
-		assertThat(count).isEqualTo(6);		
+		assertThat(total).isEqualTo(operations.size());		
+	}
+	private void filtering(List<String> parts, String action, Double minval, Double maxval,
+			Timestamp dawn, Timestamp dusk) {
+		
+		if(action != null) parts.add(String.format("action LIKE %s", "'"+action+"'"));
+		if(minval != null && maxval != null) parts.add(String.format("amount BETWEEN %.2f AND %.2f", minval, maxval).replace(',', '.'));
+		else if(minval != null) parts.add(String.format("amount >= %.2f", minval).replace(',', '.'));
+		else if(maxval != null) parts.add(String.format("amount <= %.2f", maxval).replace(',', '.'));
+		if(dawn != null && dusk != null)  parts.add(String.format("created_at BETWEEN %s AND %s", "'"+dawn+"'", "'"+dusk+"'"));
+		else if(dawn != null) parts.add(String.format("created_at >= %s", "'"+dawn+"'"));
+		else if(dusk != null) parts.add(String.format("created_at <= %s", "'"+dusk+"'"));
+		
+		for(int i = 1; i < parts.size(); i++) {
+			StringBuilder sb = new StringBuilder();
+			sb.append("AND ");
+			sb.append(parts.get(i));
+			parts.set(i, sb.toString());
+		}
 	}
 	private static Stream<Arguments> params() {
 		return Stream.of(
