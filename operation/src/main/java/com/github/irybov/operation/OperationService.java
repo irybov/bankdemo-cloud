@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.querydsl.core.types.ExpressionUtils;
@@ -33,7 +32,7 @@ public class OperationService {
 //	@Autowired
 //	private SQLQueryFactory queryFactory;
 	
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
+	@Transactional(readOnly = false, rollbackFor = Exception.class)
 	public void save(Operation operation) {operationJDBC.save(operation);}
 	
 	Operation transfer(double amount, String action, String currency, int sender, 

@@ -1,7 +1,6 @@
 package com.github.irybov.operation;
 
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
@@ -24,7 +23,7 @@ import lombok.ToString;
 @ToString
 public class Operation {
 	
-//	@EqualsAndHashCode.Exclude
+	@EqualsAndHashCode.Exclude
 	@Id
 	@Column("id")
 	private Long id;
