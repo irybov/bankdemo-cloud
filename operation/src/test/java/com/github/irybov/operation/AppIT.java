@@ -134,6 +134,10 @@ class AppIT {
         assertThat(response.getBody().getContent().size(), is(1));
 	}
 
-	@AfterAll void clear() {populator = null;}
+	@AfterAll void clear() {
+		populator.setScripts(new ClassPathResource("test-cleanup-h2.sql"));
+		populator.execute(dataSource);
+		populator = null;
+	}
 	
 }
