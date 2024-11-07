@@ -7,10 +7,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,13 +29,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
 
 import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
-import com.querydsl.sql.Configuration;
-import com.querydsl.sql.PostgreSQLTemplates;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.sql.SQLQueryFactory;
-import com.querydsl.sql.SQLTemplates;
-import com.querydsl.sql.spring.SpringConnectionProvider;
-import com.querydsl.sql.spring.SpringExceptionTranslator;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Sql("/test-operations-h2.sql")
@@ -45,10 +43,10 @@ class OperationJDBCTest {
 	
 	@Autowired
 	private OperationJDBC operationJDBC;
+//	@Autowired
+//	private JdbcTemplate jdbcTemplate;
 	@Autowired
-	private JdbcTemplate jdbcTemplate;
-	@Autowired
-	private DataSource dataSource;
+	private SQLQueryFactory queryFactory;
 	
 	@ParameterizedTest
 	@CsvSource({"1, 1, 3", "2, 2, 2", "3, 3, 3"})
@@ -75,13 +73,7 @@ class OperationJDBCTest {
 		if(mindate != null) dawn = Timestamp.valueOf(mindate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
 		Timestamp dusk = null;
 		if(maxdate != null) dusk = Timestamp.valueOf(maxdate.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
-
-		SQLTemplates templates = new PostgreSQLTemplates();
-		Configuration configuration = new Configuration(templates);
-		configuration.setExceptionTranslator(new SpringExceptionTranslator());
-		SpringConnectionProvider provider = new SpringConnectionProvider(dataSource);
-		SQLQueryFactory queryFactory = new SQLQueryFactory(configuration, provider);
-/*		
+		
 		Predicate or = QPredicate.builder()
 				.add(id, QOperations.operations.sender::eq)
 				.add(id, QOperations.operations.recipient::eq)
@@ -96,9 +88,30 @@ class OperationJDBCTest {
 				.add(dusk, QOperations.operations.createdAt::loe)
 				.buildAnd();
 		Predicate where = ExpressionUtils.allOf(or, and);
-*/	
-//		Page<Operation> resultPage = operationJDBC.findAll(where, pageable);
-
+	
+		PathBuilder<Operation> entityPath = 
+				new PathBuilder<>(Operation.class, QOperations.operations.getMetadata());
+		List<OrderSpecifier<?>> list = new LinkedList<>();
+        for(Sort.Order order : pageable.getSort()) {
+            PathBuilder<Object> path = entityPath.get(order.getProperty());
+            list.add(new OrderSpecifier(Order.valueOf(order.getDirection().name()), path));
+        }
+        OrderSpecifier<?>[] array = list.toArray(new OrderSpecifier[list.size()]);
+		
+		List<Operation> operations = queryFactory
+				.select(Projections.constructor(Operation.class, QOperations.operations.all()))
+				.from(QOperations.operations)
+				.where(where)
+				.orderBy(array)
+				.limit(pageable.getPageSize())
+				.offset(pageable.getOffset())
+				.fetch();
+		Long total = queryFactory
+				.select(Projections.constructor(Operation.class, QOperations.operations.all()))
+				.from(QOperations.operations)
+				.where(where)
+				.fetchCount();
+/*
 		List<String> orders = new ArrayList<>();
 		Sort sort = pageable.getSort();
 		sort.iterator().forEachRemaining(order -> orders.add(order.getProperty() + " " + order.getDirection().name()));
@@ -113,40 +126,41 @@ class OperationJDBCTest {
 				String.format("ORDER BY %s LIMIT %d OFFSET %d", orderBy, pageable.getPageSize(), pageable.getOffset());
 		parts.add(paging);		
 		String query = String.join(" ", parts);
-		List<Operation> operations = jdbcTemplate.query(query, BeanPropertyRowMapper.newInstance(Operation.class));
+//		List<Operation> operations = jdbcTemplate.query(query, BeanPropertyRowMapper.newInstance(Operation.class));
 		
 		parts.clear();
 		String count = 
 				String.format("SELECT COUNT(*) FROM bankdemo.operations WHERE (sender = %d OR recipient = %d)", id, id);
 		parts.add(count);
 		filtering(parts, action, minval, maxval, dawn, dusk);
-		query = new String(String.join(" ", parts));		
+		query = new String(String.join(" ", parts));
+*/		
 //		long total = operationJDBC.count();
-		Long total = jdbcTemplate.queryForObject(query, Long.class);
+//		Long total = jdbcTemplate.queryForObject(query, Long.class);
 		Page<Operation> resultPage = new PageImpl<>(operations, pageable, total);
 		
 		assertThat(operations.size()).isEqualTo(quantity);		
 		assertThat(resultPage.getContent().size()).isEqualTo(quantity);
 		assertThat(total).isEqualTo(operations.size());		
 	}
-	private void filtering(List<String> parts, String action, Double minval, Double maxval,
-			Timestamp dawn, Timestamp dusk) {
-		
-		if(action != null) parts.add(String.format("action LIKE %s", "'"+action+"'"));
-		if(minval != null && maxval != null) parts.add(String.format("amount BETWEEN %.2f AND %.2f", minval, maxval).replace(',', '.'));
-		else if(minval != null) parts.add(String.format("amount >= %.2f", minval).replace(',', '.'));
-		else if(maxval != null) parts.add(String.format("amount <= %.2f", maxval).replace(',', '.'));
-		if(dawn != null && dusk != null)  parts.add(String.format("created_at BETWEEN %s AND %s", "'"+dawn+"'", "'"+dusk+"'"));
-		else if(dawn != null) parts.add(String.format("created_at >= %s", "'"+dawn+"'"));
-		else if(dusk != null) parts.add(String.format("created_at <= %s", "'"+dusk+"'"));
-		
-		for(int i = 1; i < parts.size(); i++) {
-			StringBuilder sb = new StringBuilder();
-			sb.append("AND ");
-			sb.append(parts.get(i));
-			parts.set(i, sb.toString());
-		}
-	}
+//	private void filtering(List<String> parts, String action, Double minval, Double maxval,
+//			Timestamp dawn, Timestamp dusk) {
+//		
+//		if(action != null) parts.add(String.format("action LIKE %s", "'"+action+"'"));
+//		if(minval != null && maxval != null) parts.add(String.format("amount BETWEEN %.2f AND %.2f", minval, maxval).replace(',', '.'));
+//		else if(minval != null) parts.add(String.format("amount >= %.2f", minval).replace(',', '.'));
+//		else if(maxval != null) parts.add(String.format("amount <= %.2f", maxval).replace(',', '.'));
+//		if(dawn != null && dusk != null)  parts.add(String.format("created_at BETWEEN %s AND %s", "'"+dawn+"'", "'"+dusk+"'"));
+//		else if(dawn != null) parts.add(String.format("created_at >= %s", "'"+dawn+"'"));
+//		else if(dusk != null) parts.add(String.format("created_at <= %s", "'"+dusk+"'"));
+//		
+//		for(int i = 1; i < parts.size(); i++) {
+//			StringBuilder sb = new StringBuilder();
+//			sb.append("AND ");
+//			sb.append(parts.get(i));
+//			parts.set(i, sb.toString());
+//		}
+//	}
 	private static Stream<Arguments> params() {
 		return Stream.of(
 				Arguments.of(1, "deposit", 100.00, 700.00,

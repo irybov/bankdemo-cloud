@@ -6,6 +6,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
+import com.querydsl.core.annotations.QueryProjection;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -22,6 +24,19 @@ import lombok.ToString;
 @Table(schema="bankdemo", name="operations")
 @ToString
 public class Operation {
+	
+	@QueryProjection
+	public Operation(String action, Double amount, String bank, Timestamp createdAt, String currency, 
+			Long id, Integer sender, Integer recipient) {
+		this.id = id;
+		this.createdAt = createdAt;
+		this.amount = amount;
+		this.action = action;
+		this.currency = currency;
+		this.sender = sender;
+		this.recipient = recipient;
+		this.bank = bank;
+	}
 	
 	@EqualsAndHashCode.Exclude
 	@Id

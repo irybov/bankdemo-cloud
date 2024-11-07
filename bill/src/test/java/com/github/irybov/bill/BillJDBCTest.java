@@ -25,6 +25,7 @@ public class BillJDBCTest {
 	@Test
 	void multi_test() {
 		
+		// create
 		Bill bill = new Bill("SEA", 0);
 		bill.create();
 		bill = jdbc.save(bill);
@@ -32,22 +33,16 @@ public class BillJDBCTest {
 		assertThat(bill.getCurrency().equals("SEA"));
 		assertThat(bill.getBalance() == BigDecimal.valueOf(0.00));
 		
+		// get one
 		bill = jdbc.findById(1).get();
 		assertThat(bill.getCurrency().equals("USD"));
 		assertThat(bill.getBalance() == BigDecimal.valueOf(10.00));
 		
+		 // get list
 		List<Bill> bills = jdbc.findByOwner(1);
 		assertThat(bills.size() == 2);
 		
-		jdbc.deleteById(1);
-		jdbc.deleteById(2);
-		bills = jdbc.findByOwner(1);
-		assertThat(bills.isEmpty());
-	}
-	
-	@Test
-	void can_change_status() {
-		
+		// change status
 		String select = String.format("SELECT is_active FROM bankdemo.bills WHERE id = %d", 1);
 		boolean isActive = template.queryForObject(select, Boolean.class);
 		assertThat(isActive == true);
@@ -59,12 +54,9 @@ public class BillJDBCTest {
 		select = String.format("SELECT is_active FROM bankdemo.bills WHERE id = %d", 1);
 		isActive = template.queryForObject(select, Boolean.class);
 		assertThat(isActive == false);
-	}
-
-	@Test
-	void can_update_balance() {
 		
-		Bill bill = jdbc.findById(1).get();
+		// update balance
+		bill = jdbc.findById(1).get();
 		bill.update(5.00);
 		bill = jdbc.save(bill);
 		assertThat(bill.getBalance().doubleValue() == 15.00);
@@ -72,6 +64,12 @@ public class BillJDBCTest {
 		bill.update(-20.00);
 		bill = jdbc.save(bill);
 		assertThat(bill.getBalance().doubleValue() == -5.00);
+		
+		// delete
+		jdbc.deleteById(1);
+		jdbc.deleteById(2);
+		bills = jdbc.findByOwner(1);
+		assertThat(bills.isEmpty());
 	}
 	
 }

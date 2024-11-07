@@ -1,9 +1,8 @@
 package com.github.irybov.account;
 
-/**
- * Hello world!
- *
- */
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
 public class App 
 {
     public static void main( String[] args )
