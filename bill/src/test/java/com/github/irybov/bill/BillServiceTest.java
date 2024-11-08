@@ -66,8 +66,8 @@ public class BillServiceTest {
 	
 	@Test
 	void can_get_one() {
-		Optional<Bill> result = Optional.of(bill);
-		when(jdbc.findById(anyInt())).thenReturn(result);
+		Optional<Bill> optional = Optional.of(bill);
+		when(jdbc.findById(anyInt())).thenReturn(optional);
 		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(Bill.class);
 		verify(jdbc).findById(anyInt());
 	}

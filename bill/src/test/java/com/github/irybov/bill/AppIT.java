@@ -48,7 +48,7 @@ public class AppIT {
 	@BeforeAll
 	void prepare() {		
 		populator = new ResourceDatabasePopulator();
-		populator.addScripts(new ClassPathResource("test-data-h2.sql"));
+		populator.addScripts(new ClassPathResource("test-bill-h2.sql"));
 		populator.execute(dataSource);
 	}
 	

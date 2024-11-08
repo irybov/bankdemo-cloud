@@ -135,7 +135,7 @@ class AppIT {
 	}
 
 	@AfterAll void clear() {
-		populator.setScripts(new ClassPathResource("test-cleanup-h2.sql"));
+		populator.setScripts(new ClassPathResource("test-clean-data-h2.sql"));
 		populator.execute(dataSource);
 		populator = null;
 	}

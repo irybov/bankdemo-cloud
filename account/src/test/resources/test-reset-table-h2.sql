@@ -1,0 +1,1 @@
+TRUNCATE TABLE bankdemo.accounts RESTART IDENTITY;
