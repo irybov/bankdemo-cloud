@@ -67,7 +67,7 @@ class AppIT {
 		Operation.OperationBuilder builder = Operation.builder();
 		Operation operation = builder
 			.amount(0.00)
-			.action("external")
+			.action("unknown")
 			.currency("SEA")
 			.createdAt(Timestamp.valueOf(OffsetDateTime.now()
 					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))

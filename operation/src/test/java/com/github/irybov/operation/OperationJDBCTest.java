@@ -163,9 +163,9 @@ class OperationJDBCTest {
 //	}
 	private static Stream<Arguments> params() {
 		return Stream.of(
-				Arguments.of(1, "deposit", 100.00, 700.00,
+				Arguments.of(1, Action.DEPOSIT.name().toLowerCase(), 100.00, 700.00,
 						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 1),
-				Arguments.of(2, "transfer", 200.00, 900.00,
+				Arguments.of(2, Action.TRANSFER.name().toLowerCase(), 200.00, 900.00,
 						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 2),
 				Arguments.of(3, null, null, null, 
 						OffsetDateTime.now().minusDays(1L), OffsetDateTime.now().plusDays(1L), 3),
@@ -183,7 +183,7 @@ class OperationJDBCTest {
 		Operation.OperationBuilder builder = Operation.builder();
 		Operation operation = builder
 			.amount(0.00)
-			.action("external")
+			.action(Action.EXTERNAL.name().toLowerCase())
 			.currency("SEA")
 			.createdAt(Timestamp.valueOf(OffsetDateTime.now()
 					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))

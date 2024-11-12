@@ -82,11 +82,13 @@ class OperationServiceTest {
 		String currency = "SEA";
 		when(builder.build()).thenReturn(operation);
 		
-		assertThat(operationService.deposit(new Random().nextDouble(), currency, "^[A-Z]{3}",
-				new Random().nextInt(), "Demo")).hasSameClassAs(operation);
-		assertThat(operationService.withdraw(new Random().nextDouble(), currency, "^[A-Z]{3}",
-				new Random().nextInt(), "Demo")).hasSameClassAs(operation);
-		assertThat(operationService.transfer(new Random().nextDouble(), currency, "^[A-Z]{3}",
+		assertThat(operationService.construct(new Random().nextDouble(), Action.DEPOSIT, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
+		assertThat(operationService.construct(new Random().nextDouble(), Action.WITHDRAW, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
+		assertThat(operationService.construct(new Random().nextDouble(), Action.TRANSFER, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
+		assertThat(operationService.construct(new Random().nextDouble(), Action.EXTERNAL, currency,
 				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
 	}
 	

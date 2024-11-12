@@ -39,11 +39,37 @@ public class OperationService {
 	@Transactional(readOnly = false, rollbackFor = Exception.class)
 	public void save(Operation operation) {operationJDBC.save(operation);}
 	
-	Operation transfer(double amount, String action, String currency, int sender, 
+	Operation construct(double amount, Action action, String currency, int sender, 
 			int recipient, String bank) {
-		return Operation.builder()
+		
+		Operation operation = null;
+		switch(action) {
+			case DEPOSIT:
+				operation = Operation.builder()
 				.amount(amount)
-				.action(action)
+				.action(action.name().toLowerCase())
+				.currency(currency)
+				.recipient(recipient)
+				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
+						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
+				.bank(bank)
+				.build();
+				
+			case WITHDRAW:
+				operation = Operation.builder()
+				.amount(amount)
+				.action(action.name().toLowerCase())
+				.currency(currency)
+				.sender(sender)
+				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
+						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
+				.bank(bank)
+				.build();
+			
+			case TRANSFER:
+				operation = Operation.builder()
+				.amount(amount)
+				.action(action.name().toLowerCase())
 				.currency(currency)
 				.sender(sender)
 				.recipient(recipient)
@@ -51,31 +77,21 @@ public class OperationService {
 						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 				.bank(bank)
 				.build();
-	};
-	Operation deposit(double amount, String action, String currency, int recipient, 
-			String bank) {
-		return Operation.builder()
+				
+			case EXTERNAL:
+				operation = Operation.builder()
 				.amount(amount)
-				.action(action)
+				.action(action.name().toLowerCase())
 				.currency(currency)
+				.sender(sender)
 				.recipient(recipient)
 				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
 						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 				.bank(bank)
 				.build();
-	};
-	Operation withdraw(double amount, String action, String currency, int sender, 
-			String bank) {
-		return Operation.builder()
-				.amount(amount)
-				.action(action)
-				.currency(currency)
-				.sender(sender)
-				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
-						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
-				.bank(bank)
-				.build();
-	};
+		}		
+		return operation;
+	}
 	
 	public Operation getOne(long id) {
 		return operationJDBC.findById(id).get();

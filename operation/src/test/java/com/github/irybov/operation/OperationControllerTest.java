@@ -85,7 +85,7 @@ class OperationControllerTest {
 		Operation.OperationBuilder builder = Operation.builder();
 		Operation operation = builder
 			.amount(0.00)
-			.action("external")
+			.action("unknown")
 			.currency("SEA")
 			.createdAt(Timestamp.valueOf(OffsetDateTime.now()
 					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
@@ -100,7 +100,7 @@ class OperationControllerTest {
 //		.andExpect(jsonPath("$.id").exists())
 		.andExpect(jsonPath("$.createdAt").exists())
 		.andExpect(jsonPath("$.amount").value(0.00))
-		.andExpect(jsonPath("$.action").value("external"))
+		.andExpect(jsonPath("$.action").value("unknown"))
 		.andExpect(jsonPath("$.bank").value("Demo"))
 		.andExpect(jsonPath("$.currency").value("SEA"));
 		
