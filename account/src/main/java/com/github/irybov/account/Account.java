@@ -29,7 +29,7 @@ public class Account {
 	@Column("updated_at")
 	private Timestamp updatedAt;
 	@Column("is_active")
-	@JsonProperty(value="isActive")
+//	@JsonProperty(value="isActive")
 	private boolean isActive;
 	@Column("name")
 	@NonNull

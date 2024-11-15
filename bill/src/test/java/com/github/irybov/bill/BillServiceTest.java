@@ -31,11 +31,16 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import com.github.irybov.shared.BillDTO;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BillServiceTest {
-	
+
+	@Spy
+	private BillMapperImpl mapStruct;
 	@Mock
 	private BillJDBC jdbc;
 	@Mock
@@ -54,7 +59,7 @@ public class BillServiceTest {
 	@BeforeEach
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
-		service = new BillService(jdbc, template);
+		service = new BillService(mapStruct, jdbc, template);
 	}
 	
 	@Test
@@ -65,10 +70,18 @@ public class BillServiceTest {
 	}
 	
 	@Test
-	void can_get_one() {
+	void can_get_bill() {
 		Optional<Bill> optional = Optional.of(bill);
 		when(jdbc.findById(anyInt())).thenReturn(optional);
-		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(Bill.class);
+		assertThat(service.getBill(anyInt())).isExactlyInstanceOf(Bill.class);
+		verify(jdbc).findById(anyInt());
+	}
+	
+	@Test
+	void can_get_dto() {
+		Optional<Bill> optional = Optional.of(bill);
+		when(jdbc.findById(anyInt())).thenReturn(optional);
+		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(BillDTO.class);
 		verify(jdbc).findById(anyInt());
 	}
 	
@@ -81,9 +94,9 @@ public class BillServiceTest {
 		final int owner = new Random().nextInt();
 		
 		when(jdbc.findByOwner(owner)).thenReturn(bills);
-		List<Bill> results = service.getList(owner);
+		List<BillDTO> results = service.getList(owner);
 		assertAll(
-				() -> assertThat(results).hasSameClassAs(new ArrayList<Bill>()),
+				() -> assertThat(results).hasSameClassAs(new ArrayList<BillDTO>()),
 				() -> assertThat(results.size()).isEqualTo(bills.size()));
 		verify(jdbc).findByOwner(owner);
 	}

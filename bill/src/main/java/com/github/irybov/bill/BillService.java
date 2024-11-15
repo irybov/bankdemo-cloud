@@ -7,13 +7,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.irybov.shared.BillDTO;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class BillService {
-
+	
+	private final BillMapper mapStruct;
 	private final BillJDBC jdbc;
 	private final JdbcTemplate template;
 	
@@ -24,10 +27,10 @@ public class BillService {
 	}
 	
 	@Transactional(readOnly = true, noRollbackFor = Exception.class)
-	public Bill getOne(int id) {return jdbc.findById(id).get();}
+	public BillDTO getOne(int id) {return mapStruct.toDTO(getBill(id));}
 	
 	@Transactional(readOnly = true, noRollbackFor = Exception.class)
-	public List<Bill> getList(int owner) {return jdbc.findByOwner(owner);}
+	public List<BillDTO> getList(int owner) {return mapStruct.toList(jdbc.findByOwner(owner));}
 	
 	public boolean changeStatus(int id) {
 		String select = String.format("SELECT is_active FROM bankdemo.bills WHERE id = %d", id);
@@ -40,7 +43,7 @@ public class BillService {
 	}
 	
 	public double updateBalance(int id, double amount) {
-		Bill bill = getOne(id);
+		Bill bill = getBill(id);
 		bill.update(amount);
 		jdbc.save(bill);
 //		String select = String.format("SELECT balance FROM bankdemo.operations WHERE id = %d", id);
@@ -50,5 +53,7 @@ public class BillService {
 	}
 	
 	public void delete(int id) {jdbc.deleteById(id);}
+	
+	Bill getBill(int id) {return jdbc.findById(id).get();}
 	
 }

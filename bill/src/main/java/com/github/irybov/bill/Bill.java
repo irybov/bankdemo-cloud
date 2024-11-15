@@ -30,7 +30,7 @@ public class Bill {
 	@Column("updated_at")
 	private Timestamp updatedAt;
 	@Column("is_active")
-	@JsonProperty(value="isActive")
+//	@JsonProperty(value="isActive")
 	private boolean isActive;
 	@Column("balance")
 	private BigDecimal balance;

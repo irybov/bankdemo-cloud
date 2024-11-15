@@ -2,7 +2,7 @@ package com.github.irybov.bill;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.List;
 
@@ -27,6 +27,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import com.github.irybov.shared.BillDTO;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Transactional
@@ -68,17 +70,17 @@ public class AppIT {
         assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
         
         // get one
-		ResponseEntity<Bill> bill = restTemplate.getForEntity("/bills/2", Bill.class);
+		ResponseEntity<BillDTO> bill = restTemplate.getForEntity("/bills/2", BillDTO.class);
 		assertThat(bill.getStatusCode(), is(HttpStatus.OK));
 	    assertThat(bill.getBody().getId(), is(2));
 	    assertThat(bill.getBody().getBalance().doubleValue(), is(0.00));
 	    assertThat(bill.getBody().getCurrency(), is("SEA"));
-	    assertThat(bill.getBody().getOwner(), is(1));
+//	    assertThat(bill.getBody().getOwner(), is(1));
 	    assertThat(bill.getBody().isActive(), is(true));
 	    
 	    // get list
-		ResponseEntity<List<Bill>> list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
-				null, new ParameterizedTypeReference<List<Bill>>(){});
+		ResponseEntity<List<BillDTO>> list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
+				null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		assertThat(list.getStatusCode(), is(HttpStatus.OK));
 		assertThat(list.getBody().size(), is(2));
 		
@@ -108,7 +110,7 @@ public class AppIT {
         
         // check
 		list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
-				null, new ParameterizedTypeReference<List<Bill>>(){});
+				null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		assertThat(list.getStatusCode(), is(HttpStatus.OK));
 		assertThat(list.getBody().size(), is(1));
 	}

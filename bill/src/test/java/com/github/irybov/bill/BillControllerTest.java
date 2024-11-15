@@ -26,13 +26,18 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.github.irybov.shared.BillDTO;
+
 @WebMvcTest(BillController.class)
+@Import(BillMapperImpl.class)
 public class BillControllerTest {
 	
 	@MockBean
@@ -40,13 +45,19 @@ public class BillControllerTest {
 	@Autowired
 	private MockMvc mockMVC;
 	
+	private static BillMapper mapStruct;
+	
 	private static String currency;
 	@BeforeAll
-	static void prepare() {currency = "SEA";}
+	static void prepare() {currency = "SEA"; mapStruct = Mappers.getMapper(BillMapper.class);}
 	
-	private Bill bill;
+	private BillDTO bill;
 	@BeforeEach
-	void set_up() {bill = new Bill(currency, 0); bill.create();}
+	void set_up() {
+		Bill entity = new Bill(currency, 0);
+		entity.create();
+		bill = mapStruct.toDTO(entity);
+	}
 	
 	@Test
 	void can_create() throws Exception {
@@ -81,7 +92,7 @@ public class BillControllerTest {
 	void can_get_list() throws Exception {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<Bill> bills = Collections.nCopies(size, bill).stream()
+		List<BillDTO> bills = Collections.nCopies(size, bill).stream()
 				.collect(Collectors.toList());
 		
 		when(service.getList(anyInt())).thenReturn(bills);

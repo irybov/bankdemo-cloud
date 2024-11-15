@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.irybov.shared.BillDTO;
+
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -29,10 +31,10 @@ public class BillController {
 	}
 	
 	@GetMapping("/{id}")
-	public Bill getOne(@PathVariable int id) {return service.getOne(id);}
+	public BillDTO getOne(@PathVariable int id) {return service.getOne(id);}
 	
 	@GetMapping("/{owner}/list")
-	public List<Bill> getList(@PathVariable int owner) {return service.getList(owner);}
+	public List<BillDTO> getList(@PathVariable int owner) {return service.getList(owner);}
 	
 	@PatchMapping("/{id}/status")
 	public boolean changeStatus(@PathVariable int id) {return service.changeStatus(id);}
