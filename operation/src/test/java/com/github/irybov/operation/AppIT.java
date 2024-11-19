@@ -119,7 +119,7 @@ class AppIT {
 	@Test
 	void can_get_page() throws Exception {
 		
-        String url = "http://"+uri+":"+port+"/operations/1/pageable";
+        String url = "http://"+uri+":"+port+"/operations/1/page";
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(url)
 	        .queryParam("minval", 99.99)
 	        .queryParam("maxval", 500.01)

@@ -26,8 +26,8 @@ public class BillController {
 	
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public void create(@RequestParam String currency, @RequestParam int owner) {
-		service.create(currency, owner);
+	public BillDTO create(@RequestParam String currency, @RequestParam int owner) {
+		return service.create(currency, owner);
 	}
 	
 	@GetMapping("/{id}")

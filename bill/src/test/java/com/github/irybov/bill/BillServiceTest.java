@@ -65,7 +65,8 @@ public class BillServiceTest {
 	@Test
 	void can_create() {
 		when(jdbc.save(any(Bill.class))).thenReturn(bill);
-		service.create(bill.getCurrency(), bill.getOwner());
+		assertThat(service.create(bill.getCurrency(), bill.getOwner()))
+		.isExactlyInstanceOf(BillDTO.class);
 		verify(jdbc).save(any(Bill.class));
 	}
 	

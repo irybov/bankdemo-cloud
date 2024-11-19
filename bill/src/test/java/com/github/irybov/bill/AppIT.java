@@ -65,16 +65,24 @@ public class AppIT {
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(url)
 	        .queryParam("currency", "SEA")
 	        .queryParam("owner", 1);        
-        ResponseEntity<Void> response = restTemplate.exchange(uriBuilder.toUriString(), 
-        		HttpMethod.POST, null, Void.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
-        
-        // get one
-		ResponseEntity<BillDTO> bill = restTemplate.getForEntity("/bills/2", BillDTO.class);
-		assertThat(bill.getStatusCode(), is(HttpStatus.OK));
+//        ResponseEntity<Void> response = restTemplate.exchange(uriBuilder.toUriString(), 
+//        		HttpMethod.POST, null, Void.class);
+//        assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
+        ResponseEntity<BillDTO> bill = 
+        		restTemplate.postForEntity(uriBuilder.toUriString(), null, BillDTO.class);
+        assertThat(bill.getStatusCode(), is(HttpStatus.CREATED));
 	    assertThat(bill.getBody().getId(), is(2));
 	    assertThat(bill.getBody().getBalance().doubleValue(), is(0.00));
 	    assertThat(bill.getBody().getCurrency(), is("SEA"));
+//	    assertThat(bill.getBody().getOwner(), is(1));
+	    assertThat(bill.getBody().isActive(), is(true));
+        
+        // get one
+		bill = restTemplate.getForEntity("/bills/1", BillDTO.class);
+		assertThat(bill.getStatusCode(), is(HttpStatus.OK));
+	    assertThat(bill.getBody().getId(), is(1));
+	    assertThat(bill.getBody().getBalance().doubleValue(), is(10.00));
+	    assertThat(bill.getBody().getCurrency(), is("USD"));
 //	    assertThat(bill.getBody().getOwner(), is(1));
 	    assertThat(bill.getBody().isActive(), is(true));
 	    

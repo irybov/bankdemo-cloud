@@ -41,7 +41,7 @@ public class OperationController {
 	@GetMapping("/{id}/list")
 	public List<Operation> getList(@PathVariable int id) {return service.getList(id);}
 	
-	@GetMapping("/{id}/pageable")
+	@GetMapping("/{id}/page")
 	public Page<Operation> getPage(@PathVariable int id, 
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
 			Optional<LocalDate> mindate, 

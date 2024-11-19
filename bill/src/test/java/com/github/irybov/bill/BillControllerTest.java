@@ -45,8 +45,7 @@ public class BillControllerTest {
 	@Autowired
 	private MockMvc mockMVC;
 	
-	private static BillMapper mapStruct;
-	
+	private static BillMapper mapStruct;	
 	private static String currency;
 	@BeforeAll
 	static void prepare() {currency = "SEA"; mapStruct = Mappers.getMapper(BillMapper.class);}
@@ -62,7 +61,8 @@ public class BillControllerTest {
 	@Test
 	void can_create() throws Exception {
 		
-		doNothing().when(service).create(anyString(), anyInt());
+//		doNothing().when(service).create(anyString(), anyInt());
+		when(service.create(anyString(), anyInt())).thenReturn(bill);
 		
 		mockMVC.perform(post("/bills")
 				.param("currency", currency)

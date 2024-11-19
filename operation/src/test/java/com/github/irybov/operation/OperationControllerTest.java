@@ -145,7 +145,7 @@ class OperationControllerTest {
 				any(OffsetDateTime.class), any(OffsetDateTime.class), any(Pageable.class)))
 				.thenReturn(operationPage);
 		
-		mockMVC.perform(get("/operations/{id}/pageable", "0")
+		mockMVC.perform(get("/operations/{id}/page", "0")
 						.param("action", "unknown")
 						.param("minval", "0.01")
 						.param("maxval", "0.02")

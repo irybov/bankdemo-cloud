@@ -1,6 +1,5 @@
 package com.github.irybov.account;
 
-import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Set;

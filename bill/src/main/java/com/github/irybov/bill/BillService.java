@@ -20,10 +20,11 @@ public class BillService {
 	private final BillJDBC jdbc;
 	private final JdbcTemplate template;
 	
-	public void create(String currency, int owner) {
+	public BillDTO create(String currency, int owner) {
 		Bill bill = new Bill(currency, owner);
 		bill.create();
-		jdbc.save(bill);
+		bill = jdbc.save(bill);
+		return mapStruct.toDTO(bill);
 	}
 	
 	@Transactional(readOnly = true, noRollbackFor = Exception.class)

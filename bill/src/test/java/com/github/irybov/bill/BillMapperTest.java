@@ -4,7 +4,10 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,13 +34,12 @@ public class BillMapperTest {
 	void test() {
 		
 		BillDTO dto = mapStruct.toDTO(bill);
-		List<Bill> bills = new ArrayList<>();
-		bills.add(bill);
-		bills.add(new Bill("SEA", 0));
+		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
+		List<Bill> bills = Collections.nCopies(size, bill).stream()
+				.collect(Collectors.toList());
 		List<BillDTO> dtos = mapStruct.toList(bills);
 		
 		assertAll(
-			() -> assertEquals(dto.getCurrency(), bill.getCurrency()), 
 			() -> assertEquals(dto.isActive(), bill.isActive()), 
 			() -> assertEquals(dto.getCurrency(), bill.getCurrency()), 
 			() -> assertEquals(dto.getBalance(), bill.getBalance()), 

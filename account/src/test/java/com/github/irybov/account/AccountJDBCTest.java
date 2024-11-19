@@ -2,7 +2,11 @@ package com.github.irybov.account;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.sql.DataSource;
 
@@ -42,12 +46,32 @@ public class AccountJDBCTest {
 	void can_get_one() {
 		Account account = jdbc.findById(2).get();
 		assertThat(account.getBills().size() == 2);
+		
+		account = jdbc.findByPhone("3333333333");
+		assertThat(account.getBills().size() == 1);
 	}
 	
 	@Test
 	void can_get_all() {
 		List<Account> accounts = (List<Account>) jdbc.findAll();
 		assertThat(accounts.size() == 4);
+	}
+	
+	@Test
+	void can_update() {
+		
+		Account account = jdbc.findByPhone("2222222222");
+		assertThat(account.getBills() == null);		
+		Set<Integer> ids = IntStream.rangeClosed(4, 6).boxed().collect(Collectors.toSet());
+		account.setBills(ids);
+		account = jdbc.save(account);
+		assertThat(account.getBills().size() == 3);
+		
+		account = jdbc.findById(4).get();
+		assertThat(account.getBills().size() == 1);		
+		account.getBills().add(7);
+		account = jdbc.save(account);
+		assertThat(account.getBills().size() == 2);
 	}
 	
 	@AfterAll void clear() {
