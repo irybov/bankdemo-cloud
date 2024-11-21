@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +19,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -32,6 +35,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +44,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.OrderSpecifier;
@@ -47,6 +53,8 @@ import com.querydsl.sql.SQLQueryFactory;
 
 class OperationServiceTest {
 	
+	@Mock
+	private RestTemplate restTemplate;
 	@Mock
 	private OperationJDBC operationJDBC;
 //	@Mock
@@ -71,6 +79,7 @@ class OperationServiceTest {
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
 		operationService = new OperationService();
+		ReflectionTestUtils.setField(operationService, "restTemplate", restTemplate);
 		ReflectionTestUtils.setField(operationService, "operationJDBC", operationJDBC);
 //		ReflectionTestUtils.setField(operationService, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(operationService, "queryFactory", queryFactory);
@@ -82,14 +91,18 @@ class OperationServiceTest {
 		String currency = "SEA";
 		when(builder.build()).thenReturn(operation);
 		
-		assertThat(operationService.construct(new Random().nextDouble(), Action.DEPOSIT, currency,
-				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
-		assertThat(operationService.construct(new Random().nextDouble(), Action.WITHDRAW, currency,
-				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
-		assertThat(operationService.construct(new Random().nextDouble(), Action.TRANSFER, currency,
-				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
-		assertThat(operationService.construct(new Random().nextDouble(), Action.EXTERNAL, currency,
-				new Random().nextInt(), new Random().nextInt(), "Demo")).hasSameClassAs(operation);
+		assertThat(operationService.construct(
+				new OperationDTO(new Random().nextDouble(), Action.DEPOSIT, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
+		assertThat(operationService.construct(
+				new OperationDTO(new Random().nextDouble(), Action.WITHDRAW, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
+		assertThat(operationService.construct(
+				new OperationDTO(new Random().nextDouble(), Action.TRANSFER, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
+		assertThat(operationService.construct(
+				new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, currency,
+				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
 	}
 	
 	@Test
@@ -124,10 +137,11 @@ class OperationServiceTest {
 	void can_get_page() {
 		
 		final long size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<Operation> operations = Stream.generate(Operation::new)
-				.limit(size)
-				.collect(Collectors.toList());			
-		Page<Operation> result = new PageImpl<Operation>(operations);
+//		List<Operation> operations = Stream.generate(Operation::new)
+//				.limit(size)
+//				.collect(Collectors.toList());			
+//		Page<Operation> result = new PageImpl<Operation>(operations);
+		
 //		when(jdbcTemplate.query(anyString(), any(BeanPropertyRowMapper.class))).thenReturn(operations);
 //		when(jdbcTemplate.queryForObject(anyString(), eq(Long.class))).thenReturn(size);
 /*		
@@ -165,10 +179,20 @@ class OperationServiceTest {
 	}
 	
 	@Test
-	void can_save() {		
+	void can_save() {
+		
+//		doNothing().when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+    	doAnswer(new Answer<Void>() {
+			@Override
+			public Void answer(InvocationOnMock invocation) {return null;}})
+    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
 		when(operationJDBC.save(any(Operation.class))).thenReturn(new Operation());
-		operationService.save(new Operation());
+		
+		operationService.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
+				new Random().nextInt(), new Random().nextInt(), "Demo"));
+		
 		verify(operationJDBC).save(any(Operation.class));
+		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
 	}
 	
     @AfterEach

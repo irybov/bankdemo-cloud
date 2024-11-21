@@ -5,7 +5,11 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
+import java.net.URI;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -21,9 +25,12 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
@@ -31,7 +38,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.test.web.client.ExpectedCount;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -40,11 +50,25 @@ import org.springframework.web.util.UriComponentsBuilder;
 class AppIT {
 	
 	@Autowired
-	private TestRestTemplate restTemplate;
+	private RestTemplate restTemplate;
+	@TestConfiguration
+	static class RestTemplateConfig {
+	
+		@Bean
+	    @Primary
+		public RestTemplate restTemplate() {
+			return new RestTemplate();
+		}
+		
+	}
+	
+	@Autowired
+	private TestRestTemplate testRestTemplate;
 	
 	@Autowired
 	private DataSource dataSource;
 	private ResourceDatabasePopulator populator;
+	private MockRestServiceServer mockServer;
 	
 	@Value("${server.address}")
 	private String uri;
@@ -56,6 +80,7 @@ class AppIT {
 		populator = new ResourceDatabasePopulator();
 		populator.addScripts(new ClassPathResource("test-operations-h2.sql"));
 		populator.execute(dataSource);
+		mockServer = MockRestServiceServer.createServer(restTemplate);
 	}
 	
 	@Test
@@ -64,6 +89,10 @@ class AppIT {
 	@Test
 	void can_save() throws Exception {
 		
+	    mockServer.expect(ExpectedCount.once(), requestTo(new URI("http://BILL/bills")))
+	    .andExpect(method(HttpMethod.PATCH))
+	    .andRespond(withStatus(HttpStatus.OK));
+/*		
 		Operation.OperationBuilder builder = Operation.builder();
 		Operation operation = builder
 			.amount(0.00)
@@ -73,17 +102,22 @@ class AppIT {
 					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 			.bank("Demo")
 			.build();
+*/		
+		OperationDTO operation = new OperationDTO(0.01, Action.EXTERNAL, "SEA", 4, 4, "Demo");
 		
 		ResponseEntity<Void> response = 
-				restTemplate.postForEntity("/operations", operation, Void.class);
+				testRestTemplate.postForEntity("/operations", operation, Void.class);
 	    assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
+	    
+	    mockServer.verify();
+	    mockServer.reset();
 	}
 	
 	@Test
 	void can_get_one() throws Exception {
 		
 		ResponseEntity<Operation> response = 
-				restTemplate.getForEntity("/operations/1", Operation.class);
+				testRestTemplate.getForEntity("/operations/1", Operation.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 	    assertThat(response.getBody().getId(), is(1L));
 	    assertThat(response.getBody().getAction(), equalTo("deposit"));
@@ -94,7 +128,7 @@ class AppIT {
 	    assertThat(response.getBody().getSender(), is(0));
 	    assertThat(response.getBody().getRecipient(), is(1));
 		
-		response = restTemplate.getForEntity("/operations/6", Operation.class);
+		response = testRestTemplate.getForEntity("/operations/6", Operation.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 	    assertThat(response.getBody().getId(), is(6L));
 	    assertThat(response.getBody().getAction(), equalTo("transfer"));
@@ -110,7 +144,7 @@ class AppIT {
 	void can_get_list() throws Exception {
 		
 		ResponseEntity<List<Operation>> response = 
-				restTemplate.exchange("/operations/0/list", HttpMethod.GET, null, 
+				testRestTemplate.exchange("/operations/0/list", HttpMethod.GET, null, 
 						new ParameterizedTypeReference<List<Operation>>(){});
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getBody().size(), is(4));
@@ -128,7 +162,7 @@ class AppIT {
 	        .queryParam("page", 1)
 	        .queryParam("size", 2);
 		
-        ResponseEntity<Page<Operation>> response = restTemplate.exchange(uriBuilder.toUriString(), 
+        ResponseEntity<Page<Operation>> response = testRestTemplate.exchange(uriBuilder.toUriString(), 
                 HttpMethod.GET, null, new ParameterizedTypeReference<Page<Operation>>(){});
         assertThat(response.getStatusCode(), is(HttpStatus.OK));
         assertThat(response.getBody().getContent().size(), is(1));

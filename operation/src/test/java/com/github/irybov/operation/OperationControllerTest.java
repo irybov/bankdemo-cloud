@@ -21,6 +21,7 @@ import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -31,10 +32,10 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -58,39 +59,48 @@ class OperationControllerTest {
 	private ObjectMapper mapper;
 	
 	private static Operation operation;
-//	private static Operation.OperationBuilder builder;
+	private static Operation.OperationBuilder builder;
 	
 	@BeforeAll
 	static void prepare() {
-		operation = new Operation();
-//		builder = mock(Operation.OperationBuilder.class, Mockito.RETURNS_SELF);
+//		operation = new Operation();
+		builder = mock(Operation.OperationBuilder.class, Mockito.CALLS_REAL_METHODS);
+		operation = builder
+				.amount(0.00)
+				.action("unknown")
+				.currency("SEA")
+				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
+						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
+				.bank("Demo")
+				.build();
 	}
 
 	@Test
 	void can_save() throws Exception {
 		
-		doNothing().when(service).save(any(Operation.class));
+		doNothing().when(service).save(any(OperationDTO.class));
 		
 		mockMVC.perform(post("/operations")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(operation)))
+				.content(mapper.writeValueAsString(
+						new OperationDTO(0.01, Action.EXTERNAL, "SEA", 4, 4, "Demo"))))
 		.andExpect(status().isCreated());
 		
-		verify(service).save(any(Operation.class));
+		verify(service).save(any(OperationDTO.class));
 	}
 	
 	@Test
 	void can_get_one() throws Exception {
 		
-		Operation.OperationBuilder builder = Operation.builder();
-		Operation operation = builder
-			.amount(0.00)
-			.action("unknown")
-			.currency("SEA")
-			.createdAt(Timestamp.valueOf(OffsetDateTime.now()
-					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
-			.bank("Demo")
-			.build();
+//		Operation.OperationBuilder builder = Operation.builder();
+//		Operation operation = builder
+//			.amount(0.00)
+//			.action("unknown")
+//			.currency("SEA")
+//			.createdAt(Timestamp.valueOf(OffsetDateTime.now()
+//					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
+//			.bank("Demo")
+//			.build();
 		
 		when(service.getOne(anyLong())).thenReturn(operation);
 		
@@ -111,8 +121,7 @@ class OperationControllerTest {
 	void can_get_list() throws Exception {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<Operation> operations = Stream.generate(Operation::new)
-				.limit(size)
+		List<Operation> operations = Collections.nCopies(size, operation).stream()
 				.collect(Collectors.toList());
 		when(service.getList(anyInt())).thenReturn(operations);
 		
@@ -137,8 +146,10 @@ class OperationControllerTest {
 	@Test
 	void can_get_page() throws Exception {
 		
-		List<Operation> operations = new ArrayList<>();
-		operations.add(operation);
+		Operation entity = new Operation();
+		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
+		List<Operation> operations = Collections.nCopies(size, entity).stream()
+				.collect(Collectors.toList());
 		Page<Operation> operationPage = new PageImpl<>(operations);
 		
 		when(service.getPage(anyInt(), anyString(), anyDouble(), anyDouble(),
@@ -169,7 +180,7 @@ class OperationControllerTest {
     @AfterAll
     static void clear() {
     	operation = null;
-//    	builder = null;
+    	builder = null;
     }
 	
 }

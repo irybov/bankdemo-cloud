@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
 
@@ -45,16 +46,20 @@ public class Operation {
 	@Column("created_at")
 	private Timestamp createdAt;
 	@Column("amount")
+	@NonNull
 	private Double amount;
 	@Column("action")
+	@NonNull
 	private String action;
 	@Column("currency")
+	@NonNull
 	private String currency;
 	@Column("sender")
 	private Integer sender;
 	@Column("recipient")
 	private Integer recipient;
 	@Column("bank")
+	@NonNull
 	private String bank;
 
 }

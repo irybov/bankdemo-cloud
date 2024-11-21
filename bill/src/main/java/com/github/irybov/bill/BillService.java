@@ -1,7 +1,9 @@
 package com.github.irybov.bill;
 
 import java.math.BigDecimal;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -43,14 +45,19 @@ public class BillService {
 		return isActive;
 	}
 	
-	public double updateBalance(int id, double amount) {
-		Bill bill = getBill(id);
-		bill.update(amount);
-		jdbc.save(bill);
+	public void updateBalance(Map<Integer, Double> data) {
+		
+		List<Bill> bills = new LinkedList<>();
+		for(Integer id : data.keySet()) {
+			Bill bill = getBill(id);
+			bill.update(data.get(id));
+			bills.add(bill);
+		}
+		jdbc.saveAll(bills);
 //		String select = String.format("SELECT balance FROM bankdemo.operations WHERE id = %d", id);
 //		BigDecimal balance = template.queryForObject(select, BigDecimal.class);
 //		return balance;
-		return bill.getBalance().doubleValue();
+//		return bill.getBalance().doubleValue();
 	}
 	
 	public void delete(int id) {jdbc.deleteById(id);}

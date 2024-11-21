@@ -7,6 +7,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import javax.validation.Valid;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,7 +35,7 @@ public class OperationController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public void save(@RequestBody Operation operation) {service.save(operation);}
+	public void save(@Valid @RequestBody OperationDTO dto) {service.save(dto);}
 	
 	@GetMapping("/{id}")
 	public Operation getOne(@PathVariable long id) {return service.getOne(id);}

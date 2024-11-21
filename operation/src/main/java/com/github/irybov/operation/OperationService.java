@@ -3,8 +3,10 @@ package com.github.irybov.operation;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Order;
@@ -30,6 +34,8 @@ import com.querydsl.sql.SQLQueryFactory;
 public class OperationService {
 
 	@Autowired
+	private RestTemplate restTemplate;
+	@Autowired
 	private OperationJDBC operationJDBC;
 //	@Autowired
 //	private JdbcTemplate jdbcTemplate;
@@ -37,10 +43,42 @@ public class OperationService {
 	private SQLQueryFactory queryFactory;
 	
 	@Transactional(readOnly = false, rollbackFor = Exception.class)
-	public void save(Operation operation) {operationJDBC.save(operation);}
+	public void save(OperationDTO dto) {
+		
+		Map<Integer, Double> data = new LinkedHashMap<>();
+		switch(dto.getAction()) {
+			case DEPOSIT:
+				data.put(dto.getRecipient(), dto.getAmount());
+				break;
+			case WITHDRAW:
+				data.put(dto.getSender(), -dto.getAmount());
+				break;
+			case TRANSFER:
+				data.put(dto.getRecipient(), dto.getAmount());
+				data.put(dto.getSender(), -dto.getAmount());
+				break;
+			case EXTERNAL:
+				if(dto.getBank().equals("Demo")) {
+					data.put(dto.getRecipient(), dto.getAmount());
+				}
+				else {
+					data.put(dto.getSender(), -dto.getAmount());
+				}
+				break;
+		}
+		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
+		
+		operationJDBC.save(construct(dto));
+	}
 	
-	Operation construct(double amount, Action action, String currency, int sender, 
-			int recipient, String bank) {
+	Operation construct(OperationDTO dto) {
+		
+		Action action = dto.getAction();
+		Double amount = dto.getAmount();
+		String currency = dto.getCurrency();
+		Integer sender = dto.getSender();
+		Integer recipient = dto.getRecipient();
+		String bank = dto.getBank();
 		
 		Operation operation = null;
 		switch(action) {
@@ -54,6 +92,7 @@ public class OperationService {
 						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 				.bank(bank)
 				.build();
+				break;
 				
 			case WITHDRAW:
 				operation = Operation.builder()
@@ -65,6 +104,7 @@ public class OperationService {
 						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 				.bank(bank)
 				.build();
+				break;
 			
 			case TRANSFER:
 				operation = Operation.builder()
@@ -77,6 +117,7 @@ public class OperationService {
 						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 				.bank(bank)
 				.build();
+				break;				
 				
 			case EXTERNAL:
 				operation = Operation.builder()
@@ -89,13 +130,12 @@ public class OperationService {
 						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
 				.bank(bank)
 				.build();
+				break;
 		}		
 		return operation;
 	}
 	
-	public Operation getOne(long id) {
-		return operationJDBC.findById(id).get();
-	}
+	public Operation getOne(long id) {return operationJDBC.findById(id).get();}
 	
 	public List<Operation> getList(int id) {
 		return operationJDBC.findBySenderOrRecipientOrderByIdDesc(id, id);

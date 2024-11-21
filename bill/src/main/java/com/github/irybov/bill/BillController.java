@@ -1,6 +1,7 @@
 package com.github.irybov.bill;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -39,9 +41,9 @@ public class BillController {
 	@PatchMapping("/{id}/status")
 	public boolean changeStatus(@PathVariable int id) {return service.changeStatus(id);}
 	
-	@PatchMapping("/{id}/balance")
-	public double updateBalance(@PathVariable int id, @RequestParam double amount) {
-		return service.updateBalance(id, amount);
+	@PatchMapping
+	public void updateBalance(@RequestBody Map<Integer, Double> data) {
+		service.updateBalance(data);
 	}
 	
 	@DeleteMapping("/{id}")
