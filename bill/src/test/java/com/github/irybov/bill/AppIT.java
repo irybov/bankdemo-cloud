@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -21,6 +23,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -101,13 +104,14 @@ public class AppIT {
         assertThat(status.getBody(), is(false));
         
         // update balance
-        url = "http://"+uri+":"+port+"/bills/1/balance";
-        uriBuilder = UriComponentsBuilder.fromUriString(url)
-        	.queryParam("amount", -15.00);		
-		ResponseEntity<Double> balance = restTemplate.exchange(uriBuilder.toUriString(), 
-        		HttpMethod.PATCH, null, Double.class);
-        assertThat(balance.getStatusCode(), is(HttpStatus.OK));
-        assertThat(balance.getBody(), is(-5.00));
+        url = "http://"+uri+":"+port+"/bills";
+        Map<Integer, Double> data = new LinkedHashMap<>();
+        data.put(1, -3.00);
+        data.put(2, 44.00);
+        HttpEntity<Map<Integer, Double>> request = new HttpEntity<>(data);
+		ResponseEntity<Void> response = 
+				restTemplate.exchange(url, HttpMethod.PATCH, request, Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
         
         // delete
         url = "http://"+uri+":"+port+"/bills/2";

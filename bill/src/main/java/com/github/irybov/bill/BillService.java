@@ -40,7 +40,8 @@ public class BillService {
 		boolean isActive = template.queryForObject(select, Boolean.class);
 		if(isActive) isActive = false;
 		else isActive = true;
-		String update = String.format("UPDATE bankdemo.bills SET is_active = %b WHERE id = %d", isActive, id);
+		String update = 
+				String.format("UPDATE bankdemo.bills SET is_active = %b WHERE id = %d", isActive, id);
 		template.update(update);
 		return isActive;
 	}

@@ -17,7 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -34,6 +36,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.BillDTO;
 
 @WebMvcTest(BillController.class)
@@ -121,14 +124,18 @@ public class BillControllerTest {
 	@Test
 	void can_update_balance() throws Exception {
 		
-		when(service.updateBalance(anyInt(), anyDouble())).thenReturn(0.00);
+        Map<Integer, Double> data = new LinkedHashMap<>();
+        data.put(1, -3.00);
+        data.put(2, 44.00);
 		
-		mockMVC.perform(patch("/bills/{id}/balance", "0")
-				.param("amount", "0.00"))
-		.andExpect(status().isOk())
-		.andExpect(jsonPath("$").isNumber());
+		doNothing().when(service).updateBalance(any(Map.class));
 		
-		verify(service).updateBalance(anyInt(), anyDouble());
+		mockMVC.perform(patch("/bills")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(new ObjectMapper().writeValueAsString(data)))
+		.andExpect(status().isOk());
+		
+		verify(service).updateBalance(any(Map.class));
 	}
 	
 	@Test

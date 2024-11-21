@@ -43,7 +43,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import com.querydsl.core.types.Expression;
@@ -78,11 +77,7 @@ class OperationServiceTest {
 	@BeforeEach
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
-		operationService = new OperationService();
-		ReflectionTestUtils.setField(operationService, "restTemplate", restTemplate);
-		ReflectionTestUtils.setField(operationService, "operationJDBC", operationJDBC);
-//		ReflectionTestUtils.setField(operationService, "jdbcTemplate", jdbcTemplate);
-		ReflectionTestUtils.setField(operationService, "queryFactory", queryFactory);
+		operationService = new OperationService(restTemplate, operationJDBC, queryFactory);
 	}
 	
 	@Test

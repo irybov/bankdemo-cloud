@@ -8,7 +8,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -29,18 +28,17 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.sql.SQLQueryFactory;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @Transactional(readOnly = true, noRollbackFor = Exception.class)
+@RequiredArgsConstructor
 public class OperationService {
 
-	@Autowired
-	private RestTemplate restTemplate;
-	@Autowired
-	private OperationJDBC operationJDBC;
-//	@Autowired
+	private final RestTemplate restTemplate;
+	private final OperationJDBC operationJDBC;
 //	private JdbcTemplate jdbcTemplate;
-	@Autowired
-	private SQLQueryFactory queryFactory;
+	private final SQLQueryFactory queryFactory;
 	
 	@Transactional(readOnly = false, rollbackFor = Exception.class)
 	public void save(OperationDTO dto) {

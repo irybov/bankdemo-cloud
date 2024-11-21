@@ -17,7 +17,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -117,18 +120,31 @@ public class BillServiceTest {
 	@Test
 	void can_update_balance() {
 		
-		double amount = 5.00;
-		when(jdbc.findById(anyInt())).thenReturn(Optional.of(bill));
-		when(jdbc.save(any(Bill.class))).thenReturn(bill);
-//		doNothing().when(jdbc.save(any(Bill.class)));
-		assertThat(service.updateBalance(anyInt(), amount)).isEqualTo(5.00);
-		assertEquals(amount, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
+		Bill stub = new Bill("SEA", 0);
+		stub.create();
 		
-		amount = -15.00;
-		assertThat(service.updateBalance(anyInt(), amount)).isEqualTo(-10.00);
+		int billID = 0;
+		int stubID = 9;
+		double positive = 5.00;
+		double negative = -15.00;
+		Map<Integer, Double> data = new LinkedHashMap<>();		
+		
+		when(jdbc.findById(0)).thenReturn(Optional.of(bill));
+		when(jdbc.findById(9)).thenReturn(Optional.of(stub));
+		when(jdbc.saveAll(any(List.class))).thenReturn(new LinkedList<Bill>());
+//		doNothing().when(jdbc.save(any(Bill.class)));
+		data.put(billID, positive);
+		service.updateBalance(data);
+		assertEquals(5.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
+		
+		data.put(billID, negative);
+		data.put(stubID, negative);
+		service.updateBalance(data);
 		assertEquals(-10.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
-		verify(jdbc, times(2)).findById(anyInt());
-		verify(jdbc, times(2)).save(any(Bill.class));
+		assertEquals(-15.00, stub.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
+		
+		verify(jdbc, times(3)).findById(anyInt());
+		verify(jdbc, times(2)).saveAll(any(List.class));
 	}
 	
     @AfterEach
