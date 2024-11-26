@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -120,6 +121,7 @@ public class BillServiceTest {
 	@Test
 	void can_update_balance() {
 		
+		List<Bill> bills = new LinkedList<>();
 		Bill stub = new Bill("SEA", 0);
 		stub.create();
 		
@@ -129,21 +131,27 @@ public class BillServiceTest {
 		double negative = -15.00;
 		Map<Integer, Double> data = new LinkedHashMap<>();		
 		
-		when(jdbc.findById(0)).thenReturn(Optional.of(bill));
-		when(jdbc.findById(9)).thenReturn(Optional.of(stub));
-		when(jdbc.saveAll(any(List.class))).thenReturn(new LinkedList<Bill>());
+		when(jdbc.findByIdIn(any(Collection.class))).thenReturn(bills);
+//		when(jdbc.findById(0)).thenReturn(Optional.of(bill));
+//		when(jdbc.findById(9)).thenReturn(Optional.of(stub));
+		when(jdbc.saveAll(any(List.class))).thenReturn(bills);
 //		doNothing().when(jdbc.save(any(Bill.class)));
+		bill.setId(billID);
+		bills.add(bill);
 		data.put(billID, positive);
 		service.updateBalance(data);
 		assertEquals(5.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		
+		stub.setId(stubID);
+		bills.add(stub);
 		data.put(billID, negative);
 		data.put(stubID, negative);
 		service.updateBalance(data);
 		assertEquals(-10.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		assertEquals(-15.00, stub.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		
-		verify(jdbc, times(3)).findById(anyInt());
+		verify(jdbc, times(2)).findByIdIn(any(Collection.class));
+//		verify(jdbc, times(3)).findById(anyInt());
 		verify(jdbc, times(2)).saveAll(any(List.class));
 	}
 	

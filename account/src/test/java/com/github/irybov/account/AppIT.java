@@ -50,6 +50,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -134,11 +135,11 @@ public class AppIT {
 	@Test
 	void can_get_all() {
 		
-		ResponseEntity<List<AccountDTO>> list = 
+		ResponseEntity<List<AccountDTO>> response = 
 				testRestTemplate.exchange("/accounts", HttpMethod.GET, 
 				null, new ParameterizedTypeReference<List<AccountDTO>>(){});
-		assertThat(list.getStatusCode(), is(HttpStatus.OK));
-		assertThat(list.getBody().size(), is(4));
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getBody().size(), is(4));
 	}
 	
 	@Test

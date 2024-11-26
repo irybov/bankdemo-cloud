@@ -37,6 +37,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
 //@TestInstance(TestInstance.Lifecycle.PER_CLASS)

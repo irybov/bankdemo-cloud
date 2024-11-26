@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.github.irybov.account;
+package com.github.irybov.shared;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;

@@ -8,6 +8,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
+import com.github.irybov.shared.AccountDTO;
+
 @Mapper(componentModel = "spring", 
 	unmappedTargetPolicy = ReportingPolicy.IGNORE, 
 	nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL, 

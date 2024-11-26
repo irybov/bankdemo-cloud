@@ -15,6 +15,28 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   <version>${project.parent.version}</version>
   
   <dependencies>
+	<dependency>
+        <groupId>com.github.irybov</groupId>
+        <artifactId>shared</artifactId>
+        <version>${project.parent.version}</version>
+        <scope>compile</scope>
+    </dependency>
+ 	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-test</artifactId>
+		<scope>test</scope>
+		<exclusions>
+			<exclusion>
+			    <groupId>org.junit.vintage</groupId>
+   				<artifactId>junit-vintage-engine</artifactId>
+			</exclusion>
+		</exclusions>
+	</dependency>
+	<dependency>
+	    <groupId>com.github.tomakehurst</groupId>
+	    <artifactId>wiremock-jre8</artifactId>
+	    <scope>test</scope>
+	</dependency>
   	<dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-gateway</artifactId>
@@ -26,7 +48,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 	<dependency>
 		<groupId>org.springframework.cloud</groupId>
 		<artifactId>spring-cloud-starter-config</artifactId>
-	</dependency>	
+	</dependency>
+	<dependency>	
+	    <groupId>org.springframework.cloud</groupId>	
+	    <artifactId>spring-cloud-starter-bootstrap</artifactId>	
+	</dependency>		
   </dependencies>
   
 </project>

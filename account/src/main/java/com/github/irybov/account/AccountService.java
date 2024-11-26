@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
 import lombok.RequiredArgsConstructor;
