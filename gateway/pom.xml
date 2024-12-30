@@ -52,7 +52,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 	<dependency>	
 	    <groupId>org.springframework.cloud</groupId>	
 	    <artifactId>spring-cloud-starter-bootstrap</artifactId>	
-	</dependency>		
+	</dependency>
   </dependencies>
   
 </project>

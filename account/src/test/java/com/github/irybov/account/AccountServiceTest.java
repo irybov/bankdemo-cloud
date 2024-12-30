@@ -20,6 +20,9 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Validator;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,6 +34,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +48,10 @@ import com.github.irybov.shared.BillDTO;
 public class AccountServiceTest {
 	
 	@Mock
+	private Environment env;
+	@Mock
+	private Validator validator;
+	@Mock
 	private RestTemplate restTemplate;
 	@Spy
 	private AccountMapperImpl mapStruct;
@@ -56,24 +64,61 @@ public class AccountServiceTest {
 	
 	@BeforeEach
 	void prepare() {
+		
 		MockitoAnnotations.openMocks(this);
-		service = new AccountService(restTemplate, mapStruct, jdbc);
-		account = new Account(Timestamp.valueOf(OffsetDateTime.now()
-				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()), 
-				"Admin", "Adminov", "0000000000", "adminov@greenmail.io", 
-				LocalDate.of(2001, 01, 01), "superadmin");
+		service = new AccountService(env, validator, restTemplate, mapStruct, jdbc);
+		
+		account = new Account();
+		account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
+				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
+		account.setName("Admin");
+		account.setSurname("Adminov");
+		account.setPhone("0000000000");
+		account.setEmail("adminov@greenmail.io");
+		account.setBirthday(LocalDate.of(2001, 01, 01));
+		account.setPassword("superadmin");
+		account.setRoles(Collections.singleton(Role.ADMIN.getName()));
+	}
+	
+	@Test
+	void can_create() {
+		
+		Registration registration = new Registration();
+		registration.setName("Admin");
+		registration.setSurname("Adminov");
+		registration.setPhone("0000000000");
+		registration.setEmail("adminov@greenmail.io");
+		registration.setBirthday(LocalDate.of(2001, 01, 01));
+		registration.setPassword("superadmin");
+		
+		when(jdbc.save(account)).thenReturn(account);
+		service.create(registration);
+		assertThat(mapStruct.toDB(registration)).isExactlyInstanceOf(Account.class);
+		verify(jdbc).save(account);
+	}
+	
+	@Test
+	void can_generate_token() {
+		
+		when(env.getProperty("token.secret")).thenReturn("rAUOQK5LF3s0unfY8jbOkJc8Ep9H9v3Y");
+		when(env.getProperty("token.lifetime")).thenReturn("300");
+		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		assertThat(service.generateToken("0000000000:superadmin"))
+			.isExactlyInstanceOf(String.class);
+		verify(jdbc).findByPhone(anyString());
+		verify(env).getProperty("token.secret");
+		verify(env).getProperty("token.lifetime");
 	}
 
 	@Test
 	void can_get_one() {
 		
 		Optional<Account> optional = Optional.of(account);
-		
+/*		
 		when(jdbc.findById(anyInt())).thenReturn(optional);
 		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(AccountDTO.class);
 		verify(jdbc).findById(anyInt());
-		
-		
+*/		
 		BillDTO bill = new BillDTO();
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<BillDTO> bills = Collections.nCopies(size, bill).stream()

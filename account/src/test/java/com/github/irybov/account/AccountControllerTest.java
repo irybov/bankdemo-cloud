@@ -2,12 +2,16 @@ package com.github.irybov.account;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.refEq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,9 +34,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
@@ -44,15 +51,61 @@ public class AccountControllerTest {
 	private AccountService service;
 	@Autowired
 	private MockMvc mockMVC;
+	@Autowired
+	private ObjectMapper mapper;
 	
 	private static AccountMapper mapStruct;
 	private static Account account;
 	@BeforeAll
-	static void prepare() {account = new Account(Timestamp.valueOf(OffsetDateTime.now()
-			.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()), 
-			"Admin", "Adminov", "0000000000", "adminov@greenmail.io", 
-			LocalDate.of(2001, 01, 01), "superadmin"); 
-			mapStruct = Mappers.getMapper(AccountMapper.class);}
+	static void prepare() {
+		
+		account = new Account();
+		account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
+				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
+		account.setName("Admin");
+		account.setSurname("Adminov");
+		account.setPhone("0000000000");
+		account.setEmail("adminov@greenmail.io");
+		account.setBirthday(LocalDate.of(2001, 01, 01));
+		account.setPassword("superadmin");
+		account.setRoles(Collections.singleton(Role.ADMIN.getName()));
+	
+		mapStruct = Mappers.getMapper(AccountMapper.class);
+	}
+	
+	@Test
+	void can_create() throws Exception {
+		
+		Registration registration = new Registration();
+		registration.setName("Admin");
+		registration.setSurname("Adminov");
+		registration.setPhone("0000000000");
+		registration.setEmail("adminov@greenmail.io");
+		registration.setBirthday(LocalDate.of(2001, 01, 01));
+		registration.setPassword("superadmin");
+		
+		doNothing().when(service).create(refEq(registration));
+		
+		mockMVC.perform(post("/accounts")
+		.contentType(MediaType.APPLICATION_JSON)
+		.content(mapper.writeValueAsString(registration)))
+		.andExpect(status().isCreated());
+		
+		verify(service).create(refEq(registration));
+	}
+	
+	@Test
+	void can_get_token() throws Exception {
+		
+		when(service.generateToken(anyString())).thenReturn("token");
+		
+		mockMVC.perform(head("/accounts/login")
+		.header("Login", "0000000000:superadmin"))
+		.andExpect(header().string("Token", "token"))
+		.andExpect(status().isOk());
+		
+		verify(service).generateToken(anyString());
+	}
 	
 	@Test
 	void can_get_one() throws Exception {
@@ -67,9 +120,11 @@ public class AccountControllerTest {
 		
 //		when(service.getOne(anyInt())).thenReturn(mapStruct.toDTO(account));
 		when(service.getOne(anyString())).thenReturn(dto);
+		when(service.checkOwner(anyString(), anyString())).thenReturn(true);
 		
 //		mockMVC.perform(get("/accounts/{id}", "0"))
-		mockMVC.perform(get("/accounts/{phone}", "0000000000"))
+		mockMVC.perform(get("/accounts/{phone}", "0000000000")
+				.header(HttpHeaders.AUTHORIZATION, "jwt"))
 		.andExpect(status().isOk())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 		.andExpect(jsonPath("$.createdAt").exists())
@@ -84,6 +139,7 @@ public class AccountControllerTest {
 		
 //		verify(service).getOne(anyInt());
 		verify(service).getOne(anyString());
+		verify(service).checkOwner(anyString(), anyString());
 	}
 
 	@Test
@@ -94,7 +150,8 @@ public class AccountControllerTest {
 				.collect(Collectors.toList());
 		when(service.getAll()).thenReturn(mapStruct.toList(accounts));
 		
-		mockMVC.perform(get("/accounts"))
+		mockMVC.perform(get("/accounts")
+				.header(HttpHeaders.AUTHORIZATION, "jwt"))
 		.andExpect(status().isOk())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 		.andExpect(jsonPath("$").isArray())
@@ -108,13 +165,16 @@ public class AccountControllerTest {
 		
 		BillDTO bill = new BillDTO();		
 		when(service.addBill(anyString(), anyString())).thenReturn(bill);
+		when(service.checkOwner(anyString(), anyString())).thenReturn(true);
 		
 		mockMVC.perform(patch("/accounts/{phone}", "0000000000")
+				.header(HttpHeaders.AUTHORIZATION, "jwt")
 				.param("currency", "SEA"))
 		.andExpect(status().isOk())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON));
 		
 		verify(service).addBill(anyString(), anyString());
+		verify(service).checkOwner(anyString(), anyString());
 	}
 	
 	@AfterAll

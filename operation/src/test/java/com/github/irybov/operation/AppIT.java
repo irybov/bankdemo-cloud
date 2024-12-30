@@ -59,7 +59,6 @@ class AppIT {
 		public RestTemplate restTemplate() {
 			return new RestTemplate();
 		}
-		
 	}
 	
 	@Autowired

@@ -27,11 +27,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jdbc</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
-		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.postgresql</groupId> -->
+<!-- 			<artifactId>postgresql</artifactId> -->
+<!-- 			<scope>runtime</scope> -->
+<!-- 		</dependency> -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
@@ -51,7 +51,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
-			<scope>test</scope>
+			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 		    <groupId>com.querydsl</groupId>
@@ -95,10 +95,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		          </execution>
 		        </executions>
 		        <configuration>
-		          <jdbcDriver>org.postgresql.Driver</jdbcDriver>
-		          <jdbcUrl>jdbc:postgresql://localhost:5432/postgres</jdbcUrl>
-		          <jdbcUser>postgres</jdbcUser>
-		          <jdbcPassword>2309</jdbcPassword>
+		          <jdbcDriver>org.h2.Driver</jdbcDriver>
+		          <jdbcUrl>jdbc:h2:file:~/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL;</jdbcUrl>
+		          <jdbcUser>sa</jdbcUser>
+		          <jdbcPassword></jdbcPassword>
 		          <packageName>com.github.irybov.operation</packageName>
 		          <targetFolder>${project.basedir}/target/generated-sources/java</targetFolder>
 		          <schemaPattern>bankdemo</schemaPattern>
@@ -106,9 +106,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		        </configuration>
 		        <dependencies>
 		          <dependency>
-		            <groupId>org.postgresql</groupId>
-		            <artifactId>postgresql</artifactId>
-        			<version>${postgresql.version}</version>
+		            <groupId>com.h2database</groupId>
+		            <artifactId>h2</artifactId>
+        			<version>${h2.version}</version>
 		          </dependency>
 		        </dependencies>
 		      </plugin>			

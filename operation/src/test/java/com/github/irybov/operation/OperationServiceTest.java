@@ -71,7 +71,7 @@ class OperationServiceTest {
 	@BeforeAll
 	static void prepare() {
 		operation = new Operation();
-		builder = mock(Operation.OperationBuilder.class, Mockito.RETURNS_SELF);
+		builder = mock(Operation.OperationBuilder.class, Mockito.CALLS_REAL_METHODS);
 	}
 	
 	@BeforeEach
@@ -84,7 +84,7 @@ class OperationServiceTest {
 	void can_build() {
 		
 		String currency = "SEA";
-		when(builder.build()).thenReturn(operation);
+//		when(builder.build()).thenReturn(operation);
 		
 		assertThat(operationService.construct(
 				new OperationDTO(new Random().nextDouble(), Action.DEPOSIT, currency,

@@ -13,12 +13,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.crypto.SecretKey;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterAll;
@@ -36,7 +39,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,6 +59,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
@@ -62,19 +74,19 @@ public class AppIT {
 	private RestTemplate restTemplate;
 	@TestConfiguration
 	static class RestTemplateConfig {
-	
 		@Bean
 	    @Primary
 		public RestTemplate restTemplate() {
 			return new RestTemplate();
-		}
-		
+		}		
 	}
 	
 	@Autowired
 	private TestRestTemplate testRestTemplate;
 	@Autowired
 	private ObjectMapper mapper;
+	@Autowired
+	private Environment env;
 	
 	@Autowired
 	private DataSource dataSource;
@@ -98,6 +110,52 @@ public class AppIT {
 	void context_loading(ApplicationContext context) {assertThat(context).isNotNull();}
 	
 	@Test
+	void can_create() {
+		
+		Registration registration = new Registration();
+		registration.setName("Kylie");
+		registration.setSurname("Bunbury");
+		registration.setPhone("4444444444");
+		registration.setEmail("bunbury@greenmail.io");
+		registration.setBirthday(LocalDate.of(1989, 01, 30));
+		registration.setPassword("blackmamba");
+		
+		HttpEntity<Registration> data = new HttpEntity<>(registration);		
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange("/accounts", HttpMethod.POST, data, Void.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
+	}
+	
+	@Test
+	void can_get_token() {
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Login", "3333333333:gingerchick");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getHeaders().containsKey("Token"), is(true));
+		
+
+		String jwt = response.getHeaders().get("Token").get(0);
+		String tokenSecret = env.getProperty("token.secret");
+		byte[] secretKeyBytes = tokenSecret.getBytes();
+		SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
+		
+		JwtParser parser = Jwts.parser()
+                .verifyWith(secretKey)
+                .build();
+		Jws<Claims> parsedToken = 
+				parser.parseSignedClaims(jwt);
+		Collection<String> scopes = 
+				((Claims) parsedToken.getPayload()).get("scope", Collection.class);
+		
+		assertThat(scopes.size(), is(2));
+	}
+	
+	@Test
 	void can_get_one() throws JsonProcessingException, URISyntaxException {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
@@ -111,10 +169,21 @@ public class AppIT {
 	    .andRespond(withStatus(HttpStatus.OK)
 	    .contentType(MediaType.APPLICATION_JSON)
 	    .body(mapper.writeValueAsString(bills)));
+	    
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Login", "1111111111:supervixen");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
+		ResponseEntity<Void> result = 
+				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
+		String jwt = result.getHeaders().get("Token").get(0);
+		
+		headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
+		entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<AccountDTO> response = 
-//				restTemplate.getForEntity("/accounts/2", AccountDTO.class);
-				testRestTemplate.getForEntity("/accounts/1111111111", AccountDTO.class);
+				testRestTemplate.exchange(
+						"/accounts/1111111111", HttpMethod.GET, entity, AccountDTO.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 //	    assertThat(response.getBody().getId(), is(2));
 //	    assertThat(response.getBody().getCreatedAt(), notNullValue(Timestamp.class));
@@ -135,11 +204,15 @@ public class AppIT {
 	@Test
 	void can_get_all() {
 		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "jwt");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
 		ResponseEntity<List<AccountDTO>> response = 
 				testRestTemplate.exchange("/accounts", HttpMethod.GET, 
-				null, new ParameterizedTypeReference<List<AccountDTO>>(){});
+				entity, new ParameterizedTypeReference<List<AccountDTO>>(){});
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
-		assertThat(response.getBody().size(), is(4));
+		assertThat(response.getBody().size(), is(5));
 	}
 	
 	@Test
@@ -149,21 +222,34 @@ public class AppIT {
 		BillDTO bill = new BillDTO();
 		bill.setId(new Integer(0));
 		bill.setCurrency(currency);
+		
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
     	        .queryParam("currency", currency)
-    	        .queryParam("owner", 1);
+    	        .queryParam("owner", 3);
+        
 	    mockServer.expect(ExpectedCount.once(), requestTo(uriBuilder.toUriString()))
 	    .andExpect(method(HttpMethod.POST))
 	    .andRespond(withStatus(HttpStatus.OK)
 	    .contentType(MediaType.APPLICATION_JSON)
 	    .body(mapper.writeValueAsString(bill)));
-
-        uriBuilder = UriComponentsBuilder.fromUriString("/accounts/0000000000")
+	    
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Login", "2222222222:bustyblonde");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
+		String jwt = response.getHeaders().get("Token").get(0);
+		
+        uriBuilder = UriComponentsBuilder.fromUriString("/accounts/2222222222")
     	        .queryParam("currency", currency);
-        BillDTO response = 
-        		testRestTemplate.patchForObject(uriBuilder.toUriString(), null, BillDTO.class);
-        assertThat(response.getId() == 0);
-        assertThat(response.getCurrency().equals(currency));
+        
+		headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
+		entity = new HttpEntity<>(headers);
+        BillDTO dto = 
+        		testRestTemplate.patchForObject(uriBuilder.toUriString(), entity, BillDTO.class);
+        assertThat(dto.getId() == 0);
+        assertThat(dto.getCurrency().equals(currency));
 	    
 	    mockServer.verify();
 	    mockServer.reset();

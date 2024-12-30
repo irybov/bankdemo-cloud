@@ -8,14 +8,14 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.EqualsAndHashCode.CacheStrategy;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @EqualsAndHashCode(of = "phone", cacheStrategy = CacheStrategy.NEVER)
 @Table(schema="bankdemo", name="accounts")
 public class Account {
@@ -29,7 +29,6 @@ public class Account {
 	@Column("updated_at")
 	private Timestamp updatedAt;
 	@Column("is_active")
-//	@JsonProperty(value="isActive")
 	private boolean isActive;
 	@Column("name")
 	@NonNull
@@ -51,5 +50,7 @@ public class Account {
 	private String password;
 	@Column("bills")
 	private Set<Integer> bills;
+	@Column("roles")
+	private Set<String> roles;
 
 }

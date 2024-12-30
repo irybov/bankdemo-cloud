@@ -23,6 +23,7 @@ public class AccountDTO {
 	private String phone;
 	private String email;
 	private LocalDate birthday;
+//	private String password;
 	private Set<BillDTO> bills;
 
 }

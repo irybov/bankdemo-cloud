@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.github.irybov.operation.Operation.OperationBuilder;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -64,8 +65,7 @@ public class OperationService {
 				}
 				break;
 		}
-		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
-		
+		restTemplate.patchForObject("http://BILL/bills", data, Void.class);		
 		operationJDBC.save(construct(dto));
 	}
 	
@@ -79,56 +79,33 @@ public class OperationService {
 		String bank = dto.getBank();
 		
 		Operation operation = null;
-		switch(action) {
-			case DEPOSIT:
-				operation = Operation.builder()
+		OperationBuilder builder = Operation.builder()
 				.amount(amount)
 				.action(action.name().toLowerCase())
 				.currency(currency)
-				.recipient(recipient)
 				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
-						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
-				.bank(bank)
+					.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
+				.bank(bank);
+		
+		switch(action) {
+			case DEPOSIT:
+				operation = builder
+				.recipient(recipient)
 				.build();
 				break;
 				
 			case WITHDRAW:
-				operation = Operation.builder()
-				.amount(amount)
-				.action(action.name().toLowerCase())
-				.currency(currency)
+				operation = builder
 				.sender(sender)
-				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
-						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
-				.bank(bank)
 				.build();
 				break;
 			
-			case TRANSFER:
-				operation = Operation.builder()
-				.amount(amount)
-				.action(action.name().toLowerCase())
-				.currency(currency)
+			case TRANSFER: case EXTERNAL:
+				operation = builder
 				.sender(sender)
 				.recipient(recipient)
-				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
-						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
-				.bank(bank)
 				.build();
 				break;				
-				
-			case EXTERNAL:
-				operation = Operation.builder()
-				.amount(amount)
-				.action(action.name().toLowerCase())
-				.currency(currency)
-				.sender(sender)
-				.recipient(recipient)
-				.createdAt(Timestamp.valueOf(OffsetDateTime.now()
-						.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()))
-				.bank(bank)
-				.build();
-				break;
 		}		
 		return operation;
 	}

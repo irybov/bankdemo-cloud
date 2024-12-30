@@ -1,10 +1,15 @@
 package com.github.irybov.account;
 
+import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
+import org.mapstruct.AfterMapping;
 import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
@@ -20,4 +25,11 @@ public interface AccountMapper {
 	AccountDTO toDTO(Account entity);
 	List<AccountDTO> toList(List<Account> entities);
 	
+	Account toDB(Registration registration);
+	@AfterMapping
+	default void initialize(@MappingTarget Account account) {
+		account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
+			.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
+		account.setActive(true);
+	}
 }

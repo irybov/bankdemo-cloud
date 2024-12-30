@@ -2,6 +2,11 @@ package com.github.irybov.account;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,12 +48,36 @@ public class AccountJDBCTest {
 	}
 	
 	@Test
+	void can_save_new() {
+		
+		Account account = new Account();
+		account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
+				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
+		account.setName("Kylie");
+		account.setSurname("Bunbury");
+		account.setPhone("4444444444");
+		account.setEmail("bunbury@greenmail.io");
+		account.setBirthday(LocalDate.of(1989, 01, 30));
+		account.setPassword("blackmamba");
+		account.setRoles(Collections.singleton(Role.CLIENT.getName()));
+		
+		account = jdbc.save(account);
+		assertThat(account.getBills() == null);
+		assertThat(account.getRoles().size() == 1);
+		
+		List<Account> accounts = (List<Account>) jdbc.findAll();
+		assertThat(accounts.size() == 5);
+	}
+	
+	@Test
 	void can_get_one() {
 		Account account = jdbc.findById(2).get();
 		assertThat(account.getBills().size() == 2);
+		assertThat(account.getRoles().size() == 1);
 		
 		account = jdbc.findByPhone("3333333333");
 		assertThat(account.getBills().size() == 1);
+		assertThat(account.getRoles().size() == 2);
 	}
 	
 	@Test
@@ -61,7 +90,7 @@ public class AccountJDBCTest {
 	void can_update() {
 		
 		Account account = jdbc.findByPhone("2222222222");
-		assertThat(account.getBills() == null);		
+		assertThat(account.getBills() == null);
 		Set<Integer> ids = IntStream.rangeClosed(4, 6).boxed().collect(Collectors.toSet());
 		account.setBills(ids);
 		account = jdbc.save(account);
