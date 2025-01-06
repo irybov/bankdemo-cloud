@@ -58,6 +58,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -69,7 +72,7 @@ import io.jsonwebtoken.security.Keys;
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
 public class AppIT {
-	
+/*	
 	@Autowired
 	private RestTemplate restTemplate;
 	@TestConfiguration
@@ -80,7 +83,7 @@ public class AppIT {
 			return new RestTemplate();
 		}		
 	}
-	
+*/	
 	@Autowired
 	private TestRestTemplate testRestTemplate;
 	@Autowired
@@ -91,19 +94,26 @@ public class AppIT {
 	@Autowired
 	private DataSource dataSource;
 	private ResourceDatabasePopulator populator;
-	private MockRestServiceServer mockServer;
+//	private MockRestServiceServer mockServer;
 	
 	@Value("${server.address}")
 	private String uri;
 	@Value("${local.server.port}")
 	private int port;
 	
+	@Value("${app.internal-url}")
+	private static String internalURL;
+	private static WireMockServer wireMockServer;
+	
 	@BeforeAll
 	void prepare() {		
 		populator = new ResourceDatabasePopulator();
 		populator.addScripts(new ClassPathResource("test-accounts-h2.sql"));
 		populator.execute(dataSource);
-		mockServer = MockRestServiceServer.createServer(restTemplate);
+//		mockServer = MockRestServiceServer.createServer(restTemplate);
+		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8888));
+		wireMockServer.start();
+		WireMock.configureFor(internalURL, 8888);
 	}
 	
 	@Test
@@ -163,12 +173,19 @@ public class AppIT {
 				.collect(Collectors.toList());
 		int i = 1;
 		for(BillDTO bill : bills) {bill.setId(new Integer(i++));}
-		
+/*		
 	    mockServer.expect(ExpectedCount.once(), requestTo(new URI("http://BILL/bills/2/list")))
 	    .andExpect(method(HttpMethod.GET))
 	    .andRespond(withStatus(HttpStatus.OK)
 	    .contentType(MediaType.APPLICATION_JSON)
 	    .body(mapper.writeValueAsString(bills)));
+*/	    
+	    String requestURI = "/bills/2/list";
+	    wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
+				.willReturn(WireMock.aResponse()
+				.withStatus(HttpStatus.OK.value())
+				.withBody(mapper.writeValueAsString(bills))
+				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
 	    
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", "1111111111:supervixen");
@@ -197,8 +214,9 @@ public class AppIT {
 	    assertThat(response.getBody().getBills().size(), is(size));
 	    assertThat(response.getBody().isActive(), is(true));
 	    
-	    mockServer.verify();
-	    mockServer.reset();
+//	    mockServer.verify();
+//	    mockServer.reset();
+	    wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test
@@ -223,15 +241,22 @@ public class AppIT {
 		bill.setId(new Integer(0));
 		bill.setCurrency(currency);
 		
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("/bills")
     	        .queryParam("currency", currency)
     	        .queryParam("owner", 3);
-        
+/*        
 	    mockServer.expect(ExpectedCount.once(), requestTo(uriBuilder.toUriString()))
 	    .andExpect(method(HttpMethod.POST))
 	    .andRespond(withStatus(HttpStatus.OK)
 	    .contentType(MediaType.APPLICATION_JSON)
 	    .body(mapper.writeValueAsString(bill)));
+*/	    
+	    String requestURI = uriBuilder.toUriString();
+		wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(requestURI))
+				.willReturn(WireMock.aResponse()
+				.withStatus(HttpStatus.CREATED.value())
+				.withBody(mapper.writeValueAsString(bill))
+				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
 	    
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", "2222222222:bustyblonde");
@@ -251,10 +276,11 @@ public class AppIT {
         assertThat(dto.getId() == 0);
         assertThat(dto.getCurrency().equals(currency));
 	    
-	    mockServer.verify();
-	    mockServer.reset();
+//	    mockServer.verify();
+//	    mockServer.reset();
+		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 
-	@AfterAll void clear() {populator = null; mockServer = null;}
+	@AfterAll void clear() {populator = null;}
 	
 }

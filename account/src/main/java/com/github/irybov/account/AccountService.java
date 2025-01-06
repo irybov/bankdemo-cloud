@@ -47,7 +47,8 @@ public class AccountService {
 	
 	private final Environment env;
     private final Validator validator;
-	private final RestTemplate restTemplate;
+    private final BillClient billClient;
+//	private final RestTemplate restTemplate;
 	private final AccountMapper mapStruct;
 	private final AccountJDBC jdbc;
 	
@@ -93,12 +94,13 @@ public class AccountService {
 	public AccountDTO getOne(String phone) {
 		
 		Account account = getAccount(phone);
-		ResponseEntity<List<BillDTO>> response = 
-				restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
-				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
+		List<BillDTO> bills = billClient.getList(account.getId());
+//		ResponseEntity<List<BillDTO>> response = 
+//				restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
+//				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		
 		AccountDTO dto = mapStruct.toDTO(account);
-		dto.setBills(new HashSet<>(response.getBody()));
+		dto.setBills(new HashSet<>(bills));
 		return dto;
 	}
 	
@@ -107,10 +109,11 @@ public class AccountService {
 	public BillDTO addBill(String phone, String currency) {
 		
 		Account account = getAccount(phone);
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
-    	        .queryParam("currency", currency)
-    	        .queryParam("owner", account.getId());
-        BillDTO bill = restTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class);
+		BillDTO bill = billClient.create(currency, account.getId());
+//        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
+//    	        .queryParam("currency", currency)
+//    	        .queryParam("owner", account.getId());
+//        BillDTO bill = restTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class);
         
         if(account.getBills() != null) {account.getBills().add(bill.getId());}
         else {account.setBills(Stream.of(bill.getId()).collect(Collectors.toSet()));}       

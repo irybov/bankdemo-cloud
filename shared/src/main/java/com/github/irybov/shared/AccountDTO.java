@@ -7,11 +7,14 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.irybov.shared.BillDTO;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
 @Getter
 @Setter
+@EqualsAndHashCode(of = "phone", cacheStrategy = CacheStrategy.NEVER)
 public class AccountDTO {
 	
 	private Timestamp createdAt;

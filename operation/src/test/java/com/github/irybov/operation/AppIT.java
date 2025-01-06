@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -44,11 +45,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
+//@AutoConfigureWireMock(port = 8888)
 class AppIT {
-	
+/*	
 	@Autowired
 	private RestTemplate restTemplate;
 	@TestConfiguration
@@ -60,26 +66,33 @@ class AppIT {
 			return new RestTemplate();
 		}
 	}
-	
+*/	
 	@Autowired
 	private TestRestTemplate testRestTemplate;
 	
 	@Autowired
 	private DataSource dataSource;
 	private ResourceDatabasePopulator populator;
-	private MockRestServiceServer mockServer;
+//	private MockRestServiceServer mockServer;
 	
 	@Value("${server.address}")
 	private String uri;
 	@Value("${local.server.port}")
 	private int port;
 	
+	@Value("${app.internal-url}")
+	private static String internalURL;
+	private static WireMockServer wireMockServer;
+	
 	@BeforeAll
 	void prepare() {		
 		populator = new ResourceDatabasePopulator();
 		populator.addScripts(new ClassPathResource("test-operations-h2.sql"));
 		populator.execute(dataSource);
-		mockServer = MockRestServiceServer.createServer(restTemplate);
+//		mockServer = MockRestServiceServer.createServer(restTemplate);
+		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8888));
+		wireMockServer.start();
+		WireMock.configureFor(internalURL, 8888);
 	}
 	
 	@Test
@@ -87,10 +100,15 @@ class AppIT {
 	
 	@Test
 	void can_save() throws Exception {
-		
+/*		
 	    mockServer.expect(ExpectedCount.once(), requestTo(new URI("http://BILL/bills")))
 	    .andExpect(method(HttpMethod.PATCH))
 	    .andRespond(withStatus(HttpStatus.OK));
+*/		
+		String requestURI = "/bills";
+		wireMockServer.stubFor(WireMock.patch(WireMock.urlEqualTo(requestURI))
+				.willReturn(WireMock.aResponse()
+				.withStatus(HttpStatus.OK.value())));
 /*		
 		Operation.OperationBuilder builder = Operation.builder();
 		Operation operation = builder
@@ -108,8 +126,9 @@ class AppIT {
 				testRestTemplate.postForEntity("/operations", operation, Void.class);
 	    assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
 	    
-	    mockServer.verify();
-	    mockServer.reset();
+//	    mockServer.verify();
+//	    mockServer.reset();
+	    wireMockServer.verify(WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test
@@ -171,6 +190,7 @@ class AppIT {
 		populator.setScripts(new ClassPathResource("test-clean-data-h2.sql"));
 		populator.execute(dataSource);
 		populator = null;
+		wireMockServer.stop();
 	}
 	
 }

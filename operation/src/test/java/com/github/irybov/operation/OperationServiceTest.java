@@ -51,9 +51,10 @@ import com.querydsl.core.types.Predicate;
 import com.querydsl.sql.SQLQueryFactory;
 
 class OperationServiceTest {
-	
+
 	@Mock
-	private RestTemplate restTemplate;
+	private BillClient billClient;
+//	private RestTemplate restTemplate;
 	@Mock
 	private OperationJDBC operationJDBC;
 //	@Mock
@@ -77,7 +78,7 @@ class OperationServiceTest {
 	@BeforeEach
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
-		operationService = new OperationService(restTemplate, operationJDBC, queryFactory);
+		operationService = new OperationService(billClient, operationJDBC, queryFactory);
 	}
 	
 	@Test
@@ -180,14 +181,16 @@ class OperationServiceTest {
     	doAnswer(new Answer<Void>() {
 			@Override
 			public Void answer(InvocationOnMock invocation) {return null;}})
-    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
+    	.when(billClient).updateBalance(any(Map.class));
+//    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
 		when(operationJDBC.save(any(Operation.class))).thenReturn(new Operation());
 		
 		operationService.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
 				new Random().nextInt(), new Random().nextInt(), "Demo"));
 		
 		verify(operationJDBC).save(any(Operation.class));
-		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+		verify(billClient).updateBalance(any(Map.class));
+//		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
 	}
 	
     @AfterEach

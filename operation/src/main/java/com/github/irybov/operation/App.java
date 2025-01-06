@@ -6,6 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.cloud.openfeign.support.PageJacksonModule;
 import org.springframework.cloud.openfeign.support.SortJacksonModule;
 import org.springframework.context.annotation.Bean;
@@ -26,19 +27,20 @@ import com.querydsl.sql.spring.SpringExceptionTranslator;
 @SpringBootApplication
 @EnableEurekaClient
 //@EnableJdbcRepositories
+@EnableFeignClients
 public class App 
 {
     public static void main( String[] args )
     {
     	SpringApplication.run(App.class, args);
     }
-    
+/*    
 	@Bean
 	@LoadBalanced
 	public RestTemplate restTemplate() {
 		return new RestTemplate();
 	}
-    
+*/    
     @Bean
     @Primary
     public ObjectMapper objectMapper() {

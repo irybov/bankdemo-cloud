@@ -52,7 +52,8 @@ public class AccountServiceTest {
 	@Mock
 	private Validator validator;
 	@Mock
-	private RestTemplate restTemplate;
+	private BillClient billClient;
+//	private RestTemplate restTemplate;
 	@Spy
 	private AccountMapperImpl mapStruct;
 	@Mock
@@ -66,9 +67,10 @@ public class AccountServiceTest {
 	void prepare() {
 		
 		MockitoAnnotations.openMocks(this);
-		service = new AccountService(env, validator, restTemplate, mapStruct, jdbc);
+		service = new AccountService(env, validator, billClient, mapStruct, jdbc);
 		
 		account = new Account();
+		account.setId(0);
 		account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
 				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
 		account.setName("Admin");
@@ -125,13 +127,17 @@ public class AccountServiceTest {
 				.collect(Collectors.toList());
 		
 		when(jdbc.findByPhone(anyString())).thenReturn(account);
-		when(restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
-				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){}))
-			.thenReturn(new ResponseEntity<List<BillDTO>>(bills, HttpStatus.OK));
+//		when(restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
+//				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){}))
+//			.thenReturn(new ResponseEntity<List<BillDTO>>(bills, HttpStatus.OK));
+		when(billClient.getList(anyInt())).thenReturn(bills);
+		
 		assertThat(service.getOne(anyString())).isExactlyInstanceOf(AccountDTO.class);
+		
 		verify(jdbc).findByPhone(anyString());
-		verify(restTemplate).exchange("http://BILL/bills/" + account.getId() + "/list", 
-				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
+//		verify(restTemplate).exchange("http://BILL/bills/" + account.getId() + "/list", 
+//				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
+		verify(billClient).getList(anyInt());
 	}
 	
 	@Test
@@ -153,18 +159,21 @@ public class AccountServiceTest {
 	void can_add_bill() {
 		
 		BillDTO bill = new BillDTO();
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
-    	        .queryParam("currency", "SEA")
-    	        .queryParam("owner", account.getId());
+//        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
+//    	        .queryParam("currency", "SEA")
+//    	        .queryParam("owner", account.getId());
 		
 		when(jdbc.findByPhone(anyString())).thenReturn(account);
 		when(jdbc.save(any(Account.class))).thenReturn(account);
-		when(restTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class))
-			.thenReturn(bill);
+//		when(restTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class))
+//			.thenReturn(bill);
+		when(billClient.create(anyString(), anyInt())).thenReturn(bill);
 		
 		assertThat(service.addBill(anyString(), "SEA")).isExactlyInstanceOf(BillDTO.class);
 		verify(jdbc).findByPhone(anyString());
 		verify(jdbc).save(any(Account.class));
+//		verify(restTemplate).postForObject(uriBuilder.toUriString(), null, BillDTO.class);
+		verify(billClient).create(anyString(), anyInt());
 	}
 	
 	@AfterEach

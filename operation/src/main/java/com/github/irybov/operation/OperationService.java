@@ -36,8 +36,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OperationService {
 
-	private final RestTemplate restTemplate;
-	private final OperationJDBC operationJDBC;
+	private final BillClient billClient;
+//	private final RestTemplate restTemplate;
+	private final OperationJDBC jdbc;
 //	private JdbcTemplate jdbcTemplate;
 	private final SQLQueryFactory queryFactory;
 	
@@ -65,8 +66,9 @@ public class OperationService {
 				}
 				break;
 		}
-		restTemplate.patchForObject("http://BILL/bills", data, Void.class);		
-		operationJDBC.save(construct(dto));
+		billClient.updateBalance(data);
+//		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
+		jdbc.save(construct(dto));
 	}
 	
 	Operation construct(OperationDTO dto) {
@@ -110,10 +112,10 @@ public class OperationService {
 		return operation;
 	}
 	
-	public Operation getOne(long id) {return operationJDBC.findById(id).get();}
+	public Operation getOne(long id) {return jdbc.findById(id).get();}
 	
 	public List<Operation> getList(int id) {
-		return operationJDBC.findBySenderOrRecipientOrderByIdDesc(id, id);
+		return jdbc.findBySenderOrRecipientOrderByIdDesc(id, id);
 	}
 	
 	public Page<Operation> getPage(int id, String action, Double minval, Double maxval,
