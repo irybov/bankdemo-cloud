@@ -77,9 +77,9 @@ public class AppIT {
 	
 	@BeforeAll
 	static void prepare() {
-		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8888));
+		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
 		wireMockServer.start();
-		WireMock.configureFor(internalURL, 8888);
+		WireMock.configureFor(internalURL, 8761);
 	}
 	
 	private String generateJWT(Set<String> scopes) {

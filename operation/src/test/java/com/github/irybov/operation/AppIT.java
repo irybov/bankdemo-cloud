@@ -90,9 +90,9 @@ class AppIT {
 		populator.addScripts(new ClassPathResource("test-operations-h2.sql"));
 		populator.execute(dataSource);
 //		mockServer = MockRestServiceServer.createServer(restTemplate);
-		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8888));
+		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
 		wireMockServer.start();
-		WireMock.configureFor(internalURL, 8888);
+		WireMock.configureFor(internalURL, 8761);
 	}
 	
 	@Test
