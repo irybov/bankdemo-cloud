@@ -95,13 +95,11 @@ public class OperationService {
 				.recipient(recipient)
 				.build();
 				break;
-				
 			case WITHDRAW:
 				operation = builder
 				.sender(sender)
 				.build();
 				break;
-			
 			case TRANSFER: case EXTERNAL:
 				operation = builder
 				.sender(sender)

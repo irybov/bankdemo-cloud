@@ -15,13 +15,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
 @Data
 //@NoArgsConstructor
 @Table(schema="bankdemo", name="bills")
+@EqualsAndHashCode(of = "id", cacheStrategy = CacheStrategy.NEVER)
 public class Bill {
 
-	@EqualsAndHashCode.Exclude
+//	@EqualsAndHashCode.Exclude
 	@Id
 	@Column("id")
 	private Integer id;

@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
 @Builder
 @AllArgsConstructor
@@ -24,6 +25,7 @@ import lombok.ToString;
 @Setter
 @Table(schema="bankdemo", name="operations")
 @ToString
+@EqualsAndHashCode(of = "id", cacheStrategy = CacheStrategy.NEVER)
 public class Operation {
 	
 	@QueryProjection
@@ -39,7 +41,7 @@ public class Operation {
 		this.bank = bank;
 	}
 	
-	@EqualsAndHashCode.Exclude
+//	@EqualsAndHashCode.Exclude
 	@Id
 	@Column("id")
 	private Long id;

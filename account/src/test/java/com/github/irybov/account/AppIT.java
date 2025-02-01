@@ -220,6 +220,35 @@ public class AppIT {
 	}
 	
 	@Test
+	void can_work_on_fault() {
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Login", "1111111111:supervixen");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
+		ResponseEntity<Void> result = 
+				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
+		String jwt = result.getHeaders().get("Token").get(0);
+		
+		headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
+		entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<AccountDTO> response = 
+				testRestTemplate.exchange(
+						"/accounts/1111111111", HttpMethod.GET, entity, AccountDTO.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+	    assertThat(response.getBody().getUpdatedAt(), nullValue());
+	    assertThat(response.getBody().getBirthday(), notNullValue(LocalDate.class));
+	    assertThat(response.getBody().getName(), is("Kae"));
+	    assertThat(response.getBody().getSurname(), is("Yukawa"));
+	    assertThat(response.getBody().getPhone(), is("1111111111"));
+	    assertThat(response.getBody().getEmail(), is("yukawa@greenmail.io"));
+	    assertThat(response.getBody().getBills(), notNullValue());
+	    assertThat(response.getBody().getBills().isEmpty(), is(true));
+	    assertThat(response.getBody().isActive(), is(true));
+	}
+	
+	@Test
 	void can_get_all() {
 		
 		HttpHeaders headers = new HttpHeaders();
@@ -281,6 +310,6 @@ public class AppIT {
 		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 
-	@AfterAll void clear() {populator = null;}
+	@AfterAll void clear() {populator = null; wireMockServer.shutdownServer();}
 	
 }
