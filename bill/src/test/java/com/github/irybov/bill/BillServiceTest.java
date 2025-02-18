@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,15 +33,23 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cloud.stream.messaging.Source;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 
 import com.github.irybov.shared.BillDTO;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+//@ExtendWith(MockitoExtension.class)
 public class BillServiceTest {
 
 	@Spy
@@ -49,21 +58,26 @@ public class BillServiceTest {
 	private BillJDBC jdbc;
 	@Mock
 	private JdbcTemplate template;
+	@Mock
+	private Source source;
 	@InjectMocks
 	private BillService service;
 	
 	private AutoCloseable autoClosable;
 	private Bill bill;
 	
+//	private static MessageBuilder<?> builder;
+	
 	@BeforeAll
 	void prepare() {
 		bill = new Bill("SEA", 0);
 		bill.create();
+//		builder = mock(MessageBuilder.class, Mockito.CALLS_REAL_METHODS);
 	}	
 	@BeforeEach
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
-		service = new BillService(mapStruct, jdbc, template);
+		service = new BillService(mapStruct, jdbc, template, source);
 	}
 	
 	@Test
@@ -121,6 +135,8 @@ public class BillServiceTest {
 	@Test
 	void can_update_balance() {
 		
+		MessageChannel channel = Mockito.mock(MessageChannel.class);
+		
 		List<Bill> bills = new LinkedList<>();
 		Bill stub = new Bill("SEA", 0);
 		stub.create();
@@ -129,13 +145,16 @@ public class BillServiceTest {
 		int stubID = 9;
 		double positive = 5.00;
 		double negative = -15.00;
-		Map<Integer, Double> data = new LinkedHashMap<>();		
+		Map<Integer, Double> data = new LinkedHashMap<>();
 		
 		when(jdbc.findByIdIn(any(Collection.class))).thenReturn(bills);
 //		when(jdbc.findById(0)).thenReturn(Optional.of(bill));
 //		when(jdbc.findById(9)).thenReturn(Optional.of(stub));
 		when(jdbc.saveAll(any(List.class))).thenReturn(bills);
 //		doNothing().when(jdbc.save(any(Bill.class)));
+		when(source.output()).thenReturn(channel);
+		when(channel.send(any(Message.class))).thenReturn(true);
+
 		bill.setId(billID);
 		bills.add(bill);
 		data.put(billID, positive);
@@ -153,6 +172,8 @@ public class BillServiceTest {
 		verify(jdbc, times(2)).findByIdIn(any(Collection.class));
 //		verify(jdbc, times(3)).findById(anyInt());
 		verify(jdbc, times(2)).saveAll(any(List.class));
+		verify(source, times(2)).output();
+		verify(channel, times(2)).send(any(Message.class));
 	}
 	
     @AfterEach

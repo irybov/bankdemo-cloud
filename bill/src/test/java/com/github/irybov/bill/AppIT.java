@@ -7,6 +7,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 
 import javax.sql.DataSource;
 
@@ -20,7 +22,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cloud.stream.messaging.Source;
+import org.springframework.cloud.stream.test.binder.MessageCollector;
+import org.springframework.cloud.stream.test.binder.TestSupportBinderConfiguration;
+import org.springframework.cloud.stream.test.matcher.MessageQueueMatcher;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
@@ -28,18 +35,29 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.messaging.Message;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.BillDTO;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
+//@Import(TestSupportBinderConfiguration.class)
 public class AppIT {
 	
 	@Autowired
 	private TestRestTemplate restTemplate;
+	
+    @Autowired
+    private MessageCollector collector;
+    @Autowired
+    private Source source;
+    @Autowired
+    private ObjectMapper mapper;
 	
 	@Autowired
 	private DataSource dataSource;
@@ -61,7 +79,7 @@ public class AppIT {
 	void context_loading(ApplicationContext context) {assertThat(context).isNotNull();}
 	
 	@Test
-	void multi_test() {
+	void multi_test() throws JsonProcessingException {
 		
 		// create
         String url = "http://"+uri+":"+port+"/bills";
@@ -113,6 +131,11 @@ public class AppIT {
 				restTemplate.exchange(url, HttpMethod.PATCH, request, Void.class);
         assertThat(response.getStatusCode(), is(HttpStatus.OK));
         
+        // inspect message
+        Queue<Message<?>> queue = collector.forChannel(source.output());
+        Message<String> message = (Message<String>) queue.poll();
+        assertThat(message.getPayload()).isEqualTo(mapper.writeValueAsString(data));
+        
         // delete
         url = "http://"+uri+":"+port+"/bills/2";
         uriBuilder = UriComponentsBuilder.fromUriString(url);        
@@ -125,6 +148,7 @@ public class AppIT {
 				null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		assertThat(list.getStatusCode(), is(HttpStatus.OK));
 		assertThat(list.getBody().size(), is(1));
+		assertThat(list.getBody().get(0).getBalance().doubleValue(), is(7.00));
 	}
 	
 	@AfterAll void clear() {populator = null;}

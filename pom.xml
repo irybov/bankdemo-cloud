@@ -16,6 +16,7 @@
 		<module>bill</module>
 		<module>config</module>
 		<module>gateway</module>
+		<module>notificator</module>
 		<module>operation</module>
 		<module>registry</module>
     	<module>shared</module>

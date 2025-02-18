@@ -7,8 +7,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.messaging.Source;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +20,7 @@ import com.github.irybov.shared.BillDTO;
 
 import lombok.RequiredArgsConstructor;
 
+@EnableBinding(Source.class)
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class BillService {
 	private final BillMapper mapStruct;
 	private final BillJDBC jdbc;
 	private final JdbcTemplate template;
+	private final Source source;
 	
 	public BillDTO create(String currency, int owner) {
 		Bill bill = new Bill(currency, owner);
@@ -66,7 +72,9 @@ public class BillService {
 		    @Override
 		    public int getBatchSize() {return bills.size();}
 		});
-*/		
+*/
+		Message<Map<Integer, Double>> message = MessageBuilder.withPayload(data).build();
+		source.output().send(message);
 	}
 	
 	public void delete(int id) {jdbc.deleteById(id);}
