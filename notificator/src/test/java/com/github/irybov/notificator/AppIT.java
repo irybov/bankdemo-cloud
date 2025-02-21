@@ -68,7 +68,8 @@ public class AppIT {
     	
         // bind an autodelete queue to the destination exchange
     	org.springframework.amqp.core.Queue queue = this.admin.declareQueue();
-        this.admin.declareBinding(new Binding(queue.getName(), DestinationType.QUEUE, "bankdemo.notification", "#", null));
+        this.admin.declareBinding(new Binding(queue.getName(), DestinationType.QUEUE, 
+        		"bankdemo.test-notifications", "#", null));
 
         this.processor.output().send(new GenericMessage<>(data));
 
