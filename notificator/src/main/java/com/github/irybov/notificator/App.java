@@ -11,7 +11,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 
 @SpringBootApplication
 @EnableEurekaClient
-@EnableBinding(Processor.class)
+@EnableBinding(Sink.class)
 public class App
 {
 	public static void main( String[] args )
@@ -19,7 +19,7 @@ public class App
     	SpringApplication.run(App.class, args);
     }
 
-	@StreamListener(Processor.INPUT)
+	@StreamListener(Sink.INPUT)
 	public void listener(@Payload String data) {
 		System.out.println(data);
 	}

@@ -129,7 +129,7 @@ public class AppIT {
         HttpEntity<Map<Integer, Double>> request = new HttpEntity<>(data);
 		ResponseEntity<Void> response = 
 				restTemplate.exchange(url, HttpMethod.PATCH, request, Void.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getStatusCode(), is(HttpStatus.NO_CONTENT));
         
         // inspect message
         Queue<Message<?>> queue = collector.forChannel(source.output());
@@ -141,7 +141,7 @@ public class AppIT {
         uriBuilder = UriComponentsBuilder.fromUriString(url);        
         ResponseEntity<Void> delete = restTemplate.exchange(uriBuilder.toUriString(), 
         		HttpMethod.DELETE, null, Void.class);
-        assertThat(delete.getStatusCode(), is(HttpStatus.OK));
+        assertThat(delete.getStatusCode(), is(HttpStatus.NO_CONTENT));
         
         // check
 		list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 

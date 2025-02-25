@@ -82,14 +82,14 @@ public class AppIT {
 		WireMock.configureFor(internalURL, 8761);
 	}
 	
-	private String generateJWT(Set<String> scopes) {
+	private String generateJWT(Set<String> scopes, String phone) {
 		
 		SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
 				SignatureAlgorithm.HS256.getJcaName());
 		Instant now = Instant.now();
 		String token = Jwts.builder()
 				.claim("scope", scopes)
-				.subject("0000000000")
+				.subject(phone)
 				.issuer("bankdemo")
 				.expiration(Date.from(now.plusSeconds(
 						Integer.parseInt(env.getProperty("token.lifetime")))))
@@ -132,7 +132,7 @@ public class AppIT {
 		wireMockServer.stubFor(WireMock.head(WireMock.urlPathEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.OK.value())
-				.withHeader("Token", generateJWT(Collections.singleton("ROLE_ADMIN")))));
+				.withHeader("Token", generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"))));
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", login);
@@ -167,7 +167,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT"))));
+				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT")), "3333333333"));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<AccountDTO> response = 
@@ -186,11 +186,12 @@ public class AppIT {
 		BillDTO bill = new BillDTO();
 		bill.setId(new Integer(0));
 		bill.setCurrency(currency);
-		UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("/accounts/1111111111")
+		UriComponentsBuilder uriBuilder = 
+				UriComponentsBuilder.fromUriString("/accounts/1111111111/bills")
     	        .queryParam("currency", currency);
 		String requestURI = uriBuilder.toUriString();
 		
-		wireMockServer.stubFor(WireMock.patch(WireMock.urlEqualTo(requestURI))
+		wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.OK.value())
 				.withBody(mapper.writeValueAsString(bill))
@@ -198,13 +199,13 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_CLIENT")));
+				generateJWT(Collections.singleton("ROLE_CLIENT"), "1111111111"));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
-        BillDTO dto = testRestTemplate.patchForObject(requestURI, entity, BillDTO.class);
+        BillDTO dto = testRestTemplate.postForObject(requestURI, entity, BillDTO.class);
         assertThat(dto.getId() == 0);
         assertThat(dto.getCurrency().equals(currency));
-		wireMockServer.verify(WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI)));		
+		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));		
 	}
 	
 	@Test
@@ -223,7 +224,7 @@ public class AppIT {
 
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_ADMIN")));
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<List<AccountDTO>> response = 
@@ -412,8 +413,8 @@ public class AppIT {
 		String requestURI = "/operations/0/list";
 		String data = "{\"id\": 0, \"createdAt\": " + 
 				mapper.writeValueAsString(Timestamp.from(Instant.now())) + ", " + 
-				"\"amount\": 0.00, \"action\": \"unknown\", \"currency\": \"SEA\", \"sender\": 0, "
-				+ "\"recipient\": 0, \"bank\": \"Demo\"}";
+				"\"amount\": 0.00, \"action\": \"unknown\", \"currency\": \"SEA\", "
+				+ "\"sender\": 0, \"recipient\": 0, \"bank\": \"Demo\"}";
 		String json = String.format("[%s,%s]", data, data);
 		
 		wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
@@ -422,7 +423,14 @@ public class AppIT {
 				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
 				.withStatus(HttpStatus.OK.value())));
 		
-		ResponseEntity<String> response = testRestTemplate.getForEntity(requestURI, String.class);
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<String> response = 
+//				testRestTemplate.getForEntity(requestURI, String.class);
+				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		JsonNode node = mapper.readTree(response.getBody());
 		assertThat(node.isArray(), is(true));
@@ -432,9 +440,7 @@ public class AppIT {
 	}
 	
 	@Test
-	void can_get_operations_page() {
-		
-	}
+	void can_get_operations_page() {}
 	
 	@AfterAll
 	static void clear() {wireMockServer.stop();}

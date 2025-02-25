@@ -133,7 +133,7 @@ public class BillControllerTest {
 		mockMVC.perform(patch("/bills")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(new ObjectMapper().writeValueAsString(data)))
-		.andExpect(status().isOk());
+		.andExpect(status().isNoContent());
 		
 		verify(service).updateBalance(any(Map.class));
 	}
@@ -144,7 +144,7 @@ public class BillControllerTest {
 		doNothing().when(service).delete(anyInt());
 		
 		mockMVC.perform(delete("/bills/{id}", "0"))
-		.andExpect(status().isOk());
+		.andExpect(status().isNoContent());
 		
 		verify(service).delete(anyInt());
 	}

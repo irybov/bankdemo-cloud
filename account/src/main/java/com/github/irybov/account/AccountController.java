@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,22 +47,28 @@ public class AccountController {
 //	public AccountDTO getOne(@PathVariable int id) {return service.getOne(id);}
 	
 	@GetMapping("/{phone}")
-	public AccountDTO getOne(@PathVariable String phone, 
-			@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
-		if(service.checkOwner(phone, header)) {return service.getOne(phone);}
-		else {throw new SecurityException();}
-	}
+	public AccountDTO getOne(@PathVariable String phone) {return service.getOne(phone);} 
+//			@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
+//		if(service.checkFraud(phone, header)) {return service.getOne(phone);}
+//		else {throw new SecurityException();}
+//	}
 
 	@GetMapping
-	public List<AccountDTO> getAll(@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
-		return service.getAll();
+	public List<AccountDTO> getAll() {return service.getAll();}
+	
+	@PostMapping("/{phone}/bills")
+	@ResponseStatus(HttpStatus.CREATED)
+	public BillDTO addBill(@PathVariable String phone, @RequestParam String currency) {
+		return service.addBill(phone, currency);
+//			@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
+//		if(service.checkFraud(phone, header)) {return service.addBill(phone, currency);}
+//		else {throw new SecurityException();}
 	}
 	
-	@PatchMapping("/{phone}")
-	public BillDTO addBill(@PathVariable String phone, @RequestParam String currency, 
-			@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
-		if(service.checkOwner(phone, header)) {return service.addBill(phone, currency);}
-		else {throw new SecurityException();}
+	@DeleteMapping("/{phone}/bills/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void deleteBill(@PathVariable String phone, @PathVariable Integer id) {
+		service.deleteBill(phone, id);
 	}
 	
 }

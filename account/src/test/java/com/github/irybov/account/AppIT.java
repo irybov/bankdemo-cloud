@@ -186,7 +186,7 @@ public class AppIT {
 				.withStatus(HttpStatus.OK.value())
 				.withBody(mapper.writeValueAsString(bills))
 				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
-	    
+/*	    
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", "1111111111:supervixen");
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
@@ -197,10 +197,11 @@ public class AppIT {
 		headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
 		entity = new HttpEntity<>(headers);
-		
+*/		
 		ResponseEntity<AccountDTO> response = 
-				testRestTemplate.exchange(
-						"/accounts/1111111111", HttpMethod.GET, entity, AccountDTO.class);
+//				testRestTemplate.exchange(
+//						"/accounts/1111111111", HttpMethod.GET, entity, AccountDTO.class);
+				testRestTemplate.getForEntity("/accounts/1111111111", AccountDTO.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 //	    assertThat(response.getBody().getId(), is(2));
 //	    assertThat(response.getBody().getCreatedAt(), notNullValue(Timestamp.class));
@@ -221,7 +222,7 @@ public class AppIT {
 	
 	@Test
 	void can_work_on_fault() {
-		
+/*		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", "1111111111:supervixen");
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
@@ -232,10 +233,11 @@ public class AppIT {
 		headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
 		entity = new HttpEntity<>(headers);
-		
+*/		
 		ResponseEntity<AccountDTO> response = 
-				testRestTemplate.exchange(
-						"/accounts/1111111111", HttpMethod.GET, entity, AccountDTO.class);
+//				testRestTemplate.exchange(
+//						"/accounts/1111111111", HttpMethod.GET, entity, AccountDTO.class);
+				testRestTemplate.getForEntity("/accounts/1111111111", AccountDTO.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 	    assertThat(response.getBody().getUpdatedAt(), nullValue());
 	    assertThat(response.getBody().getBirthday(), notNullValue(LocalDate.class));
@@ -250,14 +252,14 @@ public class AppIT {
 	
 	@Test
 	void can_get_all() {
-		
+/*		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "jwt");
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
-		
+*/		
 		ResponseEntity<List<AccountDTO>> response = 
 				testRestTemplate.exchange("/accounts", HttpMethod.GET, 
-				entity, new ParameterizedTypeReference<List<AccountDTO>>(){});
+				null, new ParameterizedTypeReference<List<AccountDTO>>(){});
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getBody().size(), is(5));
 	}
@@ -286,28 +288,41 @@ public class AppIT {
 				.withStatus(HttpStatus.CREATED.value())
 				.withBody(mapper.writeValueAsString(bill))
 				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
-	    
+/*	    
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", "2222222222:bustyblonde");
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
 		ResponseEntity<Void> response = 
 				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
 		String jwt = response.getHeaders().get("Token").get(0);
-		
-        uriBuilder = UriComponentsBuilder.fromUriString("/accounts/2222222222")
+*/		
+        uriBuilder = UriComponentsBuilder.fromUriString("/accounts/2222222222/bills")
     	        .queryParam("currency", currency);
-        
-		headers = new HttpHeaders();
+/*        
+        HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
 		entity = new HttpEntity<>(headers);
+*/		
         BillDTO dto = 
-        		testRestTemplate.patchForObject(uriBuilder.toUriString(), entity, BillDTO.class);
+        		testRestTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class);
         assertThat(dto.getId() == 0);
         assertThat(dto.getCurrency().equals(currency));
 	    
 //	    mockServer.verify();
 //	    mockServer.reset();
 		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));
+	}
+	
+	@Test
+	void can_delete_bill() {
+		
+		wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo("/bills/1"))
+				.willReturn(WireMock.aResponse()
+				.withStatus(HttpStatus.NO_CONTENT.value())));
+		
+		testRestTemplate.delete("/accounts/1111111111/bills/1");
+		
+		wireMockServer.verify(WireMock.deleteRequestedFor(WireMock.urlEqualTo("/bills/1")));
 	}
 
 	@AfterAll void clear() {populator = null; wireMockServer.shutdownServer();}

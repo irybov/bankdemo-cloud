@@ -116,14 +116,22 @@ public class AccountService {
 //        BillDTO bill = restTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class);
         
         if(account.getBills() != null) {account.getBills().add(bill.getId());}
-        else {account.setBills(Stream.of(bill.getId()).collect(Collectors.toSet()));}       
+        else {account.setBills(Stream.of(bill.getId()).collect(Collectors.toSet()));}
         jdbc.save(account);
         return bill;
 	}
 	
-	private Account getAccount(String phone) {return jdbc.findByPhone(phone);}
+	public void deleteBill(String phone, int id) {
+		
+		Account account = getAccount(phone);
+		billClient.delete(id);
+		account.getBills().remove(id);
+		jdbc.save(account);
+	}
 	
-	boolean checkOwner(String phone, String header) {
+	private Account getAccount(String phone) {return jdbc.findByPhone(phone);}
+/*	
+	boolean checkFraud(String phone, String header) {
 		
 		String jwt = header.replace("Bearer", "").trim();
 		
@@ -141,4 +149,5 @@ public class AccountService {
 		if(owner.equals(phone)) return true;
 		return false;
 	}
+*/	
 }

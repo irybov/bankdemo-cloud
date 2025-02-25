@@ -42,9 +42,11 @@ public class BillController {
 	public boolean changeStatus(@PathVariable int id) {return service.changeStatus(id);}
 	
 	@PatchMapping
+	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void updateBalance(@RequestBody Map<Integer, Double> data) {service.updateBalance(data);}
 	
 	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void delete(@PathVariable int id) {service.delete(id);}
 	
 }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -120,11 +121,11 @@ public class AccountControllerTest {
 		
 //		when(service.getOne(anyInt())).thenReturn(mapStruct.toDTO(account));
 		when(service.getOne(anyString())).thenReturn(dto);
-		when(service.checkOwner(anyString(), anyString())).thenReturn(true);
+//		when(service.checkFraud(anyString(), anyString())).thenReturn(true);
 		
 //		mockMVC.perform(get("/accounts/{id}", "0"))
-		mockMVC.perform(get("/accounts/{phone}", "0000000000")
-				.header(HttpHeaders.AUTHORIZATION, "jwt"))
+		mockMVC.perform(get("/accounts/{phone}", "0000000000"))
+//				.header(HttpHeaders.AUTHORIZATION, "jwt"))
 		.andExpect(status().isOk())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 		.andExpect(jsonPath("$.createdAt").exists())
@@ -139,7 +140,7 @@ public class AccountControllerTest {
 		
 //		verify(service).getOne(anyInt());
 		verify(service).getOne(anyString());
-		verify(service).checkOwner(anyString(), anyString());
+//		verify(service).checkFraud(anyString(), anyString());
 	}
 
 	@Test
@@ -150,8 +151,8 @@ public class AccountControllerTest {
 				.collect(Collectors.toList());
 		when(service.getAll()).thenReturn(mapStruct.toList(accounts));
 		
-		mockMVC.perform(get("/accounts")
-				.header(HttpHeaders.AUTHORIZATION, "jwt"))
+		mockMVC.perform(get("/accounts"))
+//				.header(HttpHeaders.AUTHORIZATION, "jwt"))
 		.andExpect(status().isOk())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 		.andExpect(jsonPath("$").isArray())
@@ -165,16 +166,27 @@ public class AccountControllerTest {
 		
 		BillDTO bill = new BillDTO();		
 		when(service.addBill(anyString(), anyString())).thenReturn(bill);
-		when(service.checkOwner(anyString(), anyString())).thenReturn(true);
+//		when(service.checkFraud(anyString(), anyString())).thenReturn(true);
 		
-		mockMVC.perform(patch("/accounts/{phone}", "0000000000")
-				.header(HttpHeaders.AUTHORIZATION, "jwt")
+		mockMVC.perform(post("/accounts/{phone}/bills", "0000000000")
+//				.header(HttpHeaders.AUTHORIZATION, "jwt")
 				.param("currency", "SEA"))
-		.andExpect(status().isOk())
+		.andExpect(status().isCreated())
 		.andExpect(content().contentType(MediaType.APPLICATION_JSON));
 		
 		verify(service).addBill(anyString(), anyString());
-		verify(service).checkOwner(anyString(), anyString());
+//		verify(service).checkFraud(anyString(), anyString());
+	}
+	
+	@Test
+	void can_delete_bill() throws Exception {
+		
+		doNothing().when(service).deleteBill(anyString(), anyInt());
+		
+		mockMVC.perform(delete("/accounts/{phone}/bills/{id}", "0000000000", "0"))
+		.andExpect(status().isNoContent());
+		
+		verify(service).deleteBill(anyString(), anyInt());
 	}
 	
 	@AfterAll
