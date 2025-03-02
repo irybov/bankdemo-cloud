@@ -100,7 +100,7 @@ public class AccountControllerTest {
 		
 		when(service.generateToken(anyString())).thenReturn("token");
 		
-		mockMVC.perform(head("/accounts/login")
+		mockMVC.perform(head("/accounts")
 		.header("Login", "0000000000:superadmin"))
 		.andExpect(header().string("Token", "token"))
 		.andExpect(status().isOk());
@@ -159,6 +159,18 @@ public class AccountControllerTest {
 		.andExpect(jsonPath("$.length()").value(size));
 		
 		verify(service).getAll();
+	}
+	
+	@Test
+	void can_change_password() throws Exception {
+		
+		doNothing().when(service).changePassword(anyString(), anyString());
+		
+		mockMVC.perform(patch("/accounts/{phone}", "0000000000")
+				.param("password", "terminator"))
+		.andExpect(status().isOk());
+		
+		verify(service).changePassword(anyString(), anyString());
 	}
 	
 	@Test

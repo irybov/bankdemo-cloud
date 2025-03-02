@@ -15,10 +15,13 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Validator;
@@ -156,6 +159,16 @@ public class AccountServiceTest {
 	}
 	
 	@Test
+	void can_change_password() {
+		
+		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		service.changePassword(anyString(), "terminator");
+		assertThat(account.getPassword()).isEqualTo("terminator");
+		verify(jdbc).findByPhone(anyString());
+		verify(jdbc).save(account);
+	}
+	
+	@Test
 	void can_add_bill() {
 		
 		BillDTO bill = new BillDTO();
@@ -174,6 +187,18 @@ public class AccountServiceTest {
 		verify(jdbc).save(any(Account.class));
 //		verify(restTemplate).postForObject(uriBuilder.toUriString(), null, BillDTO.class);
 		verify(billClient).create(anyString(), anyInt());
+	}
+	
+	@Test
+	void can_delete_bill() {
+		
+		Set<Integer> bills = IntStream.range(1,5).collect(HashSet::new, Set::add, Set::addAll);
+		account.setBills(bills);
+		
+		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		service.deleteBill(anyString(), 1);
+		assertThat(account.getBills().size()).isEqualTo(3);
+		verify(jdbc).findByPhone(anyString());
 	}
 	
 	@AfterEach

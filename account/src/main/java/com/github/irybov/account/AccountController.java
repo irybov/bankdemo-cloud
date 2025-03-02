@@ -4,10 +4,14 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,15 +33,16 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/accounts")
 @RequiredArgsConstructor
+@Validated
 public class AccountController {
 	
 	private final AccountService service;
 	
 	@PostMapping()
 	@ResponseStatus(HttpStatus.CREATED)
-	public void create(@RequestBody Registration registration) {service.create(registration);}
+	public void create(@Valid @RequestBody Registration registration) {service.create(registration);}
 	
-	@RequestMapping(path = "/login", method = RequestMethod.HEAD)
+	@RequestMapping(method = RequestMethod.HEAD)
 	public void getToken(@RequestHeader(name = "Login") String header, HttpServletResponse res) {
 		String token = service.generateToken(header);
 		res.addHeader("Token", token);
@@ -55,6 +60,14 @@ public class AccountController {
 
 	@GetMapping
 	public List<AccountDTO> getAll() {return service.getAll();}
+	
+	@PatchMapping("/{phone}")
+	public void changePassword(@PathVariable String phone, 
+			@NotBlank(message = "Password must not be blank") 
+			@Size(min=10, max=60, message = "Password should be 10-60 symbols length") 
+			@RequestParam String password) {
+		service.changePassword(phone, password);
+	}
 	
 	@PostMapping("/{phone}/bills")
 	@ResponseStatus(HttpStatus.CREATED)

@@ -106,6 +106,13 @@ public class AccountService {
 	
 	public List<AccountDTO> getAll() {return mapStruct.toList((List<Account>) jdbc.findAll());}
 	
+	public void changePassword(String phone, String password) {
+		
+		Account account = getAccount(phone);
+		account.setPassword(password);
+		jdbc.save(account);
+	}
+	
 	public BillDTO addBill(String phone, String currency) {
 		
 		Account account = getAccount(phone);

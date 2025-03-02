@@ -126,7 +126,7 @@ public class AppIT {
 	@Test
 	void can_get_token() {
 		
-		String requestURI = "/accounts/login";
+		String requestURI = "/accounts";
 		String login = "0000000000:superadmin";
 		
 		wireMockServer.stubFor(WireMock.head(WireMock.urlPathEqualTo(requestURI))
@@ -176,7 +176,63 @@ public class AppIT {
 		assertThat(response.getBody().getBills().size(), is(size));
 		assertThat(response.getBody().isActive(), is(false));
 		
-		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo(requestURI)));
+		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo(requestURI))
+					.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
+	}
+	
+	@Test
+	void can_get_accounts_list() throws JsonProcessingException {
+		
+		String requestURI = "/accounts";
+		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
+		List<AccountDTO> accounts = Collections.nCopies(size, new AccountDTO()).stream()
+				.collect(Collectors.toList());
+		
+		wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(requestURI))
+				.willReturn(WireMock.aResponse()
+				.withStatus(HttpStatus.OK.value())
+				.withBody(mapper.writeValueAsString(accounts))
+				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
+	
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<List<AccountDTO>> response = 
+				testRestTemplate.exchange(requestURI, HttpMethod.GET, 
+				entity, new ParameterizedTypeReference<List<AccountDTO>>(){});
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getBody().size(), is(size));
+		
+		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo(requestURI))
+					.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
+	}
+
+	@Test
+	void can_change_password() {
+		
+		String password = "gingerwitch";
+		UriComponentsBuilder uriBuilder = 
+				UriComponentsBuilder.fromUriString("/accounts/3333333333")
+    	        .queryParam("password", password);
+		String requestURI = uriBuilder.toUriString();
+		
+		wireMockServer.stubFor(WireMock.patch(WireMock.urlEqualTo(requestURI))
+				.willReturn(WireMock.aResponse()
+				.withStatus(HttpStatus.OK.value())));
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT")), "3333333333"));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange(requestURI, HttpMethod.PATCH, entity, Void.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		
+		wireMockServer.verify(WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI))
+				.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
 	}
 	
 	@Test
@@ -205,35 +261,29 @@ public class AppIT {
         BillDTO dto = testRestTemplate.postForObject(requestURI, entity, BillDTO.class);
         assertThat(dto.getId() == 0);
         assertThat(dto.getCurrency().equals(currency));
-		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));		
+        
+		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI))
+					.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));		
 	}
 	
 	@Test
-	void can_get_accounts_list() throws JsonProcessingException {
+	void can_remove_bill_from_account() {
 		
-		String requestURI = "/accounts";
-		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<AccountDTO> accounts = Collections.nCopies(size, new AccountDTO()).stream()
-				.collect(Collectors.toList());
-		
-		wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(requestURI))
+		String requestURI = "/accounts/2222222222/bills/0";
+		wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
-				.withStatus(HttpStatus.OK.value())
-				.withBody(mapper.writeValueAsString(accounts))
-				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
-
+				.withStatus(HttpStatus.NO_CONTENT.value())));
+		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+				generateJWT(Collections.singleton("ROLE_CLIENT"), "2222222222"));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
-		ResponseEntity<List<AccountDTO>> response = 
-				testRestTemplate.exchange(requestURI, HttpMethod.GET, 
-				entity, new ParameterizedTypeReference<List<AccountDTO>>(){});
-		assertThat(response.getStatusCode(), is(HttpStatus.OK));
-		assertThat(response.getBody().size(), is(size));
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange(requestURI, HttpMethod.DELETE, entity, Void.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.NO_CONTENT));
 		
-		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo(requestURI))
+		wireMockServer.verify(WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(requestURI))
 					.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
 	}
 	
@@ -307,8 +357,7 @@ public class AppIT {
 	@Test
 	void can_delete_bill() {
 		
-		String requestURI = "/bills/0";
-		
+		String requestURI = "/bills/0";		
 		wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.OK.value())));
@@ -352,12 +401,18 @@ public class AppIT {
 				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
 				.withStatus(HttpStatus.OK.value())));
 		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
 		ResponseEntity<Boolean> response = 
-				testRestTemplate.exchange(requestURI, HttpMethod.PATCH, null, Boolean.class);
+				testRestTemplate.exchange(requestURI, HttpMethod.PATCH, entity, Boolean.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getBody(), is(false));
 		
-		wireMockServer.verify(WireMock.patchRequestedFor(WireMock.urlPathEqualTo(requestURI)));	
+		wireMockServer.verify(WireMock.patchRequestedFor(WireMock.urlPathEqualTo(requestURI))
+					.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
 	}
 	
 	@Test
@@ -393,7 +448,14 @@ public class AppIT {
 				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
 				.withStatus(HttpStatus.OK.value())));
 		
-		ResponseEntity<String> response = testRestTemplate.getForEntity(requestURI, String.class);
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<String> response = 
+//				testRestTemplate.getForEntity(requestURI, String.class);
+				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		JsonNode node = mapper.readTree(response.getBody());
 		assertThat(node.get("id").asInt(), is(0));
@@ -404,7 +466,8 @@ public class AppIT {
 		assertThat(node.get("recipient").asInt(), is(0));
 		assertThat(node.get("bank").asText(), is("Demo"));
 		
-		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));	
+		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI))
+				.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
 	}
 	
 	@Test
@@ -436,7 +499,8 @@ public class AppIT {
 		assertThat(node.isArray(), is(true));
 		assertThat(node.size(), is(2));
 		
-		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+		wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI))
+					.withHeader(HttpHeaders.AUTHORIZATION, WireMock.containing("Bearer ")));
 	}
 	
 	@Test

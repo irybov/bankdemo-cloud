@@ -144,7 +144,7 @@ public class AppIT {
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<Void> response = 
-				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
+				testRestTemplate.exchange("/accounts", HttpMethod.HEAD, entity, Void.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getHeaders().containsKey("Token"), is(true));
 		
@@ -265,6 +265,20 @@ public class AppIT {
 	}
 	
 	@Test
+	void can_change_password() {
+		
+		String password = "terminator";
+		UriComponentsBuilder uriBuilder = 
+				UriComponentsBuilder.fromUriString("/accounts/0000000000")
+    	        .queryParam("password", password);
+		
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange(uriBuilder.toUriString(), HttpMethod.PATCH, 
+				null, Void.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+	}
+	
+	@Test
 	void can_add_bill() throws JsonProcessingException, URISyntaxException {
 		
 		String currency = "SEA";
@@ -320,7 +334,11 @@ public class AppIT {
 				.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.NO_CONTENT.value())));
 		
-		testRestTemplate.delete("/accounts/1111111111/bills/1");
+//		testRestTemplate.delete("/accounts/1111111111/bills/1");
+		ResponseEntity<Void> response = 
+				testRestTemplate.exchange("/accounts/1111111111/bills/1", HttpMethod.DELETE, 
+				null, Void.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.NO_CONTENT));
 		
 		wireMockServer.verify(WireMock.deleteRequestedFor(WireMock.urlEqualTo("/bills/1")));
 	}
