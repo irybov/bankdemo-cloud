@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.jdbc.DataJdbcTest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.util.Streamable;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.jdbc.Sql;
 
@@ -82,7 +83,7 @@ public class AccountJDBCTest {
 	
 	@Test
 	void can_get_all() {
-		List<Account> accounts = (List<Account>) jdbc.findAll();
+		List<Account> accounts = Streamable.of(jdbc.findAll()).toList();
 		assertThat(accounts.size() == 4);
 	}
 	

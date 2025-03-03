@@ -21,6 +21,7 @@ import javax.validation.Validator;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.env.Environment;
+import org.springframework.data.util.Streamable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -104,7 +105,9 @@ public class AccountService {
 		return dto;
 	}
 	
-	public List<AccountDTO> getAll() {return mapStruct.toList((List<Account>) jdbc.findAll());}
+	public List<AccountDTO> getAll() {
+		return mapStruct.toList(Streamable.of(jdbc.findAll()).toList());
+	}
 	
 	public void changePassword(String phone, String password) {
 		

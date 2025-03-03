@@ -24,8 +24,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import lombok.RequiredArgsConstructor;
 
+@Api(description = "Operation's microservice controller")
 @RestController
 @RequestMapping("/operations")
 @RequiredArgsConstructor
@@ -33,16 +38,25 @@ public class OperationController {
 	
 	private final OperationService service;
 
+	@ApiOperation("Saves money operation")
+	@ApiResponses(value = {@ApiResponse(code = 201, message = "")})
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public void save(@Valid @RequestBody OperationDTO dto) {service.save(dto);}
 	
+	@ApiOperation("Gets one operation")
+	@ApiResponses(value = {@ApiResponse(code = 200, message = "", response = Operation.class)})
 	@GetMapping("/{id}")
 	public Operation getOne(@PathVariable long id) {return service.getOne(id);}
 	
+	@ApiOperation("Gets list of operations")
+	@ApiResponses(value = {@ApiResponse(code = 200, message = "", 
+			responseContainer = "List", response = Operation.class)})
 	@GetMapping("/{id}/list")
 	public List<Operation> getList(@PathVariable int id) {return service.getList(id);}
 	
+	@ApiOperation("Gets page of operations")
+	@PagebleAPI
 	@GetMapping("/{id}/page")
 	public Page<Operation> getPage(@PathVariable int id, 
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
