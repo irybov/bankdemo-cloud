@@ -1,9 +1,14 @@
 package com.github.irybov.bill;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import javax.sql.DataSource;
 
@@ -16,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.jdbc.DataJdbcTest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.jdbc.Sql;
@@ -61,9 +67,23 @@ public class BillJDBCTest {
 	}
 	
 	@Test
+	void try_get_absent_one() {
+		Optional<Bill> optional = jdbc.findById(5);
+		assertThrows(NoSuchElementException.class, () -> optional.get());
+		assertThatThrownBy(() -> optional.get()).isInstanceOf(NoSuchElementException.class);
+		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> optional.get());
+	}
+	
+	@Test
 	void can_get_list() {
 		List<Bill> bills = jdbc.findByOwner(1);
 		assertThat(bills.size() == 2);
+	}
+	
+	@Test
+	void try_get_empty_list() {
+		List<Bill> bills = jdbc.findByOwner(5);
+		assertThat(bills.isEmpty());
 	}
 	
 	@Test
@@ -80,6 +100,12 @@ public class BillJDBCTest {
 		select = String.format("SELECT is_active FROM bankdemo.bills WHERE id = %d", 1);
 		isActive = template.queryForObject(select, Boolean.class);
 		assertThat(isActive == false);
+	}
+	
+	@Test
+	void try_change_status() {
+		String select = String.format("SELECT is_active FROM bankdemo.bills WHERE id = %d", 5);
+		assertThrows(EmptyResultDataAccessException.class, () -> template.queryForObject(select, Boolean.class));
 	}
 	
 	@Test

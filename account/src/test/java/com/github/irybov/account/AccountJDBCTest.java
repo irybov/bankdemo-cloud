@@ -1,6 +1,10 @@
 package com.github.irybov.account;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -9,6 +13,8 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -79,6 +85,17 @@ public class AccountJDBCTest {
 		account = jdbc.findByPhone("3333333333");
 		assertThat(account.getBills().size() == 1);
 		assertThat(account.getRoles().size() == 2);
+	}
+	
+	@Test
+	void try_get_absent_one() {
+		Optional<Account> optional = jdbc.findById(5);
+		assertThrows(NoSuchElementException.class, () -> optional.get());
+		assertThatThrownBy(() -> optional.get()).isInstanceOf(NoSuchElementException.class);
+		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> optional.get());
+		
+		Account account = jdbc.findByPhone("4444444444");
+		assertTrue(account == null);
 	}
 	
 	@Test

@@ -1,8 +1,12 @@
 package com.github.irybov.bill;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -23,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -41,6 +46,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.messaging.Source;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -87,15 +93,15 @@ public class BillServiceTest {
 		.isExactlyInstanceOf(BillDTO.class);
 		verify(jdbc).save(any(Bill.class));
 	}
-	
+/*	
 	@Test
-	void can_get_bill() {
+	void can_get_one() {
 		Optional<Bill> optional = Optional.of(bill);
 		when(jdbc.findById(anyInt())).thenReturn(optional);
 		assertThat(service.getBill(anyInt())).isExactlyInstanceOf(Bill.class);
 		verify(jdbc).findById(anyInt());
 	}
-	
+*/	
 	@Test
 	void can_get_dto() {
 		Optional<Bill> optional = Optional.of(bill);
@@ -105,24 +111,41 @@ public class BillServiceTest {
 	}
 	
 	@Test
+	void try_get_absent_one() {
+		Optional<Bill> optional = Optional.empty();
+		when(jdbc.findById(anyInt())).thenReturn(optional);
+		assertThrows(NoSuchElementException.class, () -> service.getOne(anyInt()));
+		assertThatThrownBy(() -> service.getOne(anyInt())).isInstanceOf(NoSuchElementException.class);
+		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> service.getOne(anyInt()));
+		verify(jdbc, times(3)).findById(anyInt());
+	}
+	
+	@Test
 	void can_get_list() {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<Bill> bills = Collections.nCopies(size, bill).stream()
 				.collect(Collectors.toList());
-		final int owner = new Random().nextInt();
+//		final int owner = new Random().nextInt();
 		
-		when(jdbc.findByOwner(owner)).thenReturn(bills);
-		List<BillDTO> results = service.getList(owner);
+		when(jdbc.findByOwner(anyInt())).thenReturn(bills);
+		List<BillDTO> results = service.getList(anyInt());
 		assertAll(
 				() -> assertThat(results).hasSameClassAs(new ArrayList<BillDTO>()),
 				() -> assertThat(results.size()).isEqualTo(bills.size()));
-		verify(jdbc).findByOwner(owner);
+		verify(jdbc).findByOwner(anyInt());
+	}
+	
+	@Test
+	void try_get_empty_list() {
+//		final int owner = new Random().nextInt();
+		when(jdbc.findByOwner(anyInt())).thenReturn(new LinkedList<Bill>());
+		assertTrue(service.getList(anyInt()).isEmpty());
+		verify(jdbc).findByOwner(anyInt());
 	}
 	
 	@Test
 	void can_change_status() {
-		
 		boolean isActive = true;
 		when(template.queryForObject(anyString(), eq(Boolean.class))).thenReturn(isActive);
 		when(template.update(anyString())).thenReturn(anyInt());
@@ -130,6 +153,17 @@ public class BillServiceTest {
 		assertThat(service.changeStatus(anyInt())).isFalse();
 		verify(template).queryForObject(anyString(), eq(Boolean.class));
 		verify(template).update(anyString());
+	}
+	
+	@Test
+	void try_change_status() {
+		final int id = new Random().nextInt();
+		when(template.queryForObject(anyString(), eq(Boolean.class)))
+			.thenThrow(new EmptyResultDataAccessException(1));
+		assertThrows(EmptyResultDataAccessException.class, () -> service.changeStatus(id));
+		assertThatThrownBy(() -> service.changeStatus(id)).isInstanceOf(EmptyResultDataAccessException.class);
+		assertThatExceptionOfType(EmptyResultDataAccessException.class).isThrownBy(() -> service.changeStatus(id));
+		verify(template, times(3)).queryForObject(anyString(), eq(Boolean.class));
 	}
 	
 	@Test

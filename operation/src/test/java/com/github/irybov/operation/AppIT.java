@@ -37,6 +37,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.web.client.ExpectedCount;
@@ -96,10 +97,24 @@ class AppIT {
 	}
 	
 	@Test
-	void context_loading(ApplicationContext context) {assertThat(context).isNotNull();}
+	void context_loading(ApplicationContext context) {
+		assertThat(context).isNotNull();
+		
+		String path = "http://"+uri+":"+port;
+		
+		ResponseEntity<Void> response = 
+				testRestTemplate.getForEntity(path + "/swagger-ui/", Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.TEXT_HTML);
+        
+        response = 
+				testRestTemplate.getForEntity(path + "/v3/api-docs", Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+	}
 	
 	@Test
-	void can_save() throws Exception {
+	void can_save() {
 /*		
 	    mockServer.expect(ExpectedCount.once(), requestTo(new URI("http://BILL/bills")))
 	    .andExpect(method(HttpMethod.PATCH))
@@ -132,7 +147,7 @@ class AppIT {
 	}
 	
 	@Test
-	void can_get_one() throws Exception {
+	void can_get_one() {
 		
 		ResponseEntity<Operation> response = 
 				testRestTemplate.getForEntity("/operations/1", Operation.class);
@@ -159,7 +174,16 @@ class AppIT {
 	}
 	
 	@Test
-	void can_get_list() throws Exception {
+	void try_get_absent_one() {
+		
+		ResponseEntity<Operation> response = 
+				testRestTemplate.getForEntity("/operations/10", Operation.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.NOT_FOUND));
+		assertThat(response.hasBody(), is(false));
+	}
+	
+	@Test
+	void can_get_list() {
 		
 		ResponseEntity<List<Operation>> response = 
 				testRestTemplate.exchange("/operations/0/list", HttpMethod.GET, null, 
@@ -167,9 +191,19 @@ class AppIT {
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getBody().size(), is(4));
 	}
+	
+	@Test
+	void try_get_empty_list() {
+		
+		ResponseEntity<List<Operation>> response = 
+				testRestTemplate.exchange("/operations/5/list", HttpMethod.GET, null, 
+						new ParameterizedTypeReference<List<Operation>>(){});
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getBody().isEmpty(), is(true));
+	}
 
 	@Test
-	void can_get_page() throws Exception {
+	void can_get_page() {
 		
         String url = "http://"+uri+":"+port+"/operations/1/page";
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(url)

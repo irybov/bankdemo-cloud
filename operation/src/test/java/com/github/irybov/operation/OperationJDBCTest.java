@@ -1,6 +1,10 @@
 package com.github.irybov.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -9,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -42,7 +48,7 @@ import com.querydsl.sql.SQLQueryFactory;
 class OperationJDBCTest {
 	
 	@Autowired
-	private OperationJDBC operationJDBC;
+	private OperationJDBC jdbc;
 //	@Autowired
 //	private JdbcTemplate jdbcTemplate;
 	@Autowired
@@ -54,7 +60,7 @@ class OperationJDBCTest {
 		
 	    Comparator<Operation> compareById = Comparator.comparing(Operation::getId).reversed();	
 		List<Operation> operations =
-				operationJDBC.findBySenderOrRecipientOrderByIdDesc(sender, recipient);
+				jdbc.findBySenderOrRecipientOrderByIdDesc(sender, recipient);
 		assertThat(operations.size()).isEqualTo(quantity);
 		assertThat(operations).isSortedAccordingTo((compareById));
 	}
@@ -178,7 +184,7 @@ class OperationJDBCTest {
 	}
 
 	@Test
-	void test_save() {
+	void test_multiple_actions() {
 		
 		Operation.OperationBuilder builder = Operation.builder();
 		Operation operation = builder
@@ -190,8 +196,24 @@ class OperationJDBCTest {
 			.bank("Demo")
 			.build();
 		
-		Operation entity = operationJDBC.save(operation);
+		Operation entity = jdbc.save(operation);
 		assertThat(entity.getId() == 1);
+		assertThat(entity.getCurrency().equals("SEA"));
+		assertThat(entity.getBank().equals("Demo"));
+		
+		entity = jdbc.findById(1L).get();
+		assertThat(entity.getId() == 1);
+		assertThat(entity.getCurrency().equals("SEA"));
+		assertThat(entity.getBank().equals("Demo"));
+		
+		Optional<Operation> optional = jdbc.findById(10L);
+		assertThrows(NoSuchElementException.class, () -> optional.get());
+		assertThatThrownBy(() -> optional.get()).isInstanceOf(NoSuchElementException.class);
+		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> optional.get());
+		
+		List<Operation> operations =
+				jdbc.findBySenderOrRecipientOrderByIdDesc(4, 4);
+		assertTrue(operations.isEmpty());
 	}
 
 }

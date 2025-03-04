@@ -1,7 +1,11 @@
 package com.github.irybov.operation;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -10,6 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +25,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -56,13 +62,13 @@ class OperationServiceTest {
 	private BillClient billClient;
 //	private RestTemplate restTemplate;
 	@Mock
-	private OperationJDBC operationJDBC;
+	private OperationJDBC jdbc;
 //	@Mock
 //	private JdbcTemplate jdbcTemplate;
 	@Mock
 	private SQLQueryFactory queryFactory;
 	@InjectMocks
-	private OperationService operationService;
+	private OperationService service;
 
 	private AutoCloseable autoClosable;
 	
@@ -78,7 +84,7 @@ class OperationServiceTest {
 	@BeforeEach
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
-		operationService = new OperationService(billClient, operationJDBC, queryFactory);
+		service = new OperationService(billClient, jdbc, queryFactory);
 	}
 	
 	@Test
@@ -87,16 +93,16 @@ class OperationServiceTest {
 		String currency = "SEA";
 //		when(builder.build()).thenReturn(operation);
 		
-		assertThat(operationService.construct(
+		assertThat(service.construct(
 				new OperationDTO(new Random().nextDouble(), Action.DEPOSIT, currency,
 				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
-		assertThat(operationService.construct(
+		assertThat(service.construct(
 				new OperationDTO(new Random().nextDouble(), Action.WITHDRAW, currency,
 				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
-		assertThat(operationService.construct(
+		assertThat(service.construct(
 				new OperationDTO(new Random().nextDouble(), Action.TRANSFER, currency,
 				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
-		assertThat(operationService.construct(
+		assertThat(service.construct(
 				new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, currency,
 				new Random().nextInt(), new Random().nextInt(), "Demo"))).hasSameClassAs(operation);
 	}
@@ -104,9 +110,19 @@ class OperationServiceTest {
 	@Test
 	void can_get_one() {
 		Optional<Operation> result = Optional.of(operation);
-		when(operationJDBC.findById(anyLong())).thenReturn(result);
-		assertThat(operationService.getOne(anyLong())).isExactlyInstanceOf(Operation.class);
-		verify(operationJDBC).findById(anyLong());
+		when(jdbc.findById(anyLong())).thenReturn(result);
+		assertThat(service.getOne(anyLong())).isExactlyInstanceOf(Operation.class);
+		verify(jdbc).findById(anyLong());
+	}
+	
+	@Test
+	void try_get_absent_one() {
+		Optional<Operation> optional = Optional.empty();
+		when(jdbc.findById(anyLong())).thenReturn(optional);
+		assertThrows(NoSuchElementException.class, () -> service.getOne(anyLong()));
+		assertThatThrownBy(() -> service.getOne(anyLong())).isInstanceOf(NoSuchElementException.class);
+		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> service.getOne(anyLong()));
+		verify(jdbc, times(3)).findById(anyLong());
 	}
 	
 	@Test
@@ -118,14 +134,24 @@ class OperationServiceTest {
 				.collect(Collectors.toList());
 		final int id = new Random().nextInt();
 		
-		when(operationJDBC.findBySenderOrRecipientOrderByIdDesc(id, id))
+		when(jdbc.findBySenderOrRecipientOrderByIdDesc(id, id))
 			.thenReturn(operations);
 		
-		List<Operation> dtos = operationService.getList(id);
+		List<Operation> dtos = service.getList(id);
 		assertAll(
 				() -> assertThat(dtos).hasSameClassAs(new ArrayList<Operation>()),
 				() -> assertThat(dtos.size()).isEqualTo(operations.size()));
-		verify(operationJDBC).findBySenderOrRecipientOrderByIdDesc(id, id);
+		verify(jdbc).findBySenderOrRecipientOrderByIdDesc(id, id);
+	}
+	
+	@Test
+	void try_get_empty_list() {
+		
+		final int id = new Random().nextInt();
+		when(jdbc.findBySenderOrRecipientOrderByIdDesc(id, id))
+			.thenReturn(new ArrayList<Operation>());
+		assertTrue(service.getList(id).isEmpty());
+		verify(jdbc).findBySenderOrRecipientOrderByIdDesc(id, id);
 	}
 	
 	@Disabled
@@ -163,7 +189,7 @@ class OperationServiceTest {
 		Pageable pageable = PageRequest.of(page.getPageNumber(), page.getPageSize(),
 				   page.getSortDirection(), page.getSortBy());
 		
-		Page<Operation> dtos = operationService.getPage(id, "unknown", value, value,
+		Page<Operation> dtos = service.getPage(id, "unknown", value, value,
 				OffsetDateTime.of(LocalDate.parse("1900-01-01"), LocalTime.MIN, ZoneOffset.UTC), 
 				OffsetDateTime.now(), pageable);
 		
@@ -183,12 +209,12 @@ class OperationServiceTest {
 			public Void answer(InvocationOnMock invocation) {return null;}})
     	.when(billClient).updateBalance(any(Map.class));
 //    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
-		when(operationJDBC.save(any(Operation.class))).thenReturn(new Operation());
+		when(jdbc.save(any(Operation.class))).thenReturn(new Operation());
 		
-		operationService.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
+		service.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
 				new Random().nextInt(), new Random().nextInt(), "Demo"));
 		
-		verify(operationJDBC).save(any(Operation.class));
+		verify(jdbc).save(any(Operation.class));
 		verify(billClient).updateBalance(any(Map.class));
 //		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
 	}
@@ -196,7 +222,7 @@ class OperationServiceTest {
     @AfterEach
     void tear_down() throws Exception {
     	autoClosable.close();
-    	operationService = null;
+    	service = null;
     }
 
     @AfterAll

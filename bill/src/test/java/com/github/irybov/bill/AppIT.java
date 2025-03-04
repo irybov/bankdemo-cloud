@@ -33,6 +33,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.messaging.Message;
@@ -76,7 +77,21 @@ public class AppIT {
 	}
 	
 	@Test
-	void context_loading(ApplicationContext context) {assertThat(context).isNotNull();}
+	void context_loading(ApplicationContext context) {
+		assertThat(context).isNotNull();
+		
+		String path = "http://"+uri+":"+port;
+		
+		ResponseEntity<Void> response = 
+				restTemplate.getForEntity(path + "/swagger-ui/", Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.TEXT_HTML);
+        
+        response = 
+				restTemplate.getForEntity(path + "/v3/api-docs", Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+	}
 	
 	@Test
 	void multi_test() throws JsonProcessingException {
@@ -97,6 +112,17 @@ public class AppIT {
 	    assertThat(bill.getBody().getCurrency(), is("SEA"));
 //	    assertThat(bill.getBody().getOwner(), is(1));
 	    assertThat(bill.getBody().isActive(), is(true));
+	    
+	    // failed creation
+        uriBuilder = UriComponentsBuilder.fromUriString(url)
+    	        .queryParam("currency", "coin")
+    	        .queryParam("owner", -1); 
+        ResponseEntity<List<String>> violations = restTemplate.exchange(uriBuilder.toUriString(), 
+        		HttpMethod.POST, null, new ParameterizedTypeReference<List<String>>(){});
+        assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
+        assertThat(violations.getBody().size(), is(2));
+        assertThat(violations.getBody().contains("Currency should be 3 capital letters"), is(true));
+        assertThat(violations.getBody().contains("Owner's id should be positive"), is(true));
         
         // get one
 		bill = restTemplate.getForEntity("/bills/1", BillDTO.class);
@@ -107,11 +133,22 @@ public class AppIT {
 //	    assertThat(bill.getBody().getOwner(), is(1));
 	    assertThat(bill.getBody().isActive(), is(true));
 	    
+	    // absent one
+	    bill = restTemplate.getForEntity("/bills/5", BillDTO.class);
+	    assertThat(bill.getStatusCode(), is(HttpStatus.NOT_FOUND));
+	    assertThat(bill.hasBody(), is(false));
+	    
 	    // get list
 		ResponseEntity<List<BillDTO>> list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
 				null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		assertThat(list.getStatusCode(), is(HttpStatus.OK));
 		assertThat(list.getBody().size(), is(2));
+		
+		// empty list
+		list = restTemplate.exchange("/bills/5/list", HttpMethod.GET, 
+				null, new ParameterizedTypeReference<List<BillDTO>>(){});
+		assertThat(list.getStatusCode(), is(HttpStatus.OK));
+		assertThat(list.getBody().isEmpty(), is(true));
 		
 		// change status
         url = "http://"+uri+":"+port+"/bills/2/status";
@@ -120,6 +157,14 @@ public class AppIT {
         		HttpMethod.PATCH, null, Boolean.class);
         assertThat(status.getStatusCode(), is(HttpStatus.OK));
         assertThat(status.getBody(), is(false));
+        
+        // failed change
+        url = "http://"+uri+":"+port+"/bills/5/status";
+        uriBuilder = UriComponentsBuilder.fromUriString(url);		
+		status = restTemplate.exchange(uriBuilder.toUriString(), 
+        		HttpMethod.PATCH, null, Boolean.class);
+        assertThat(status.getStatusCode(), is(HttpStatus.NOT_FOUND));
+        assertThat(status.hasBody(), is(false));
         
         // update balance
         url = "http://"+uri+":"+port+"/bills";

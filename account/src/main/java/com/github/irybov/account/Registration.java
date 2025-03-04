@@ -13,10 +13,12 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+@ApiModel(description = "Account's registration object")
 @Getter
 @Setter
 @NoArgsConstructor

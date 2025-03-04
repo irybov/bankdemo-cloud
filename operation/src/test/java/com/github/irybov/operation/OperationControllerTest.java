@@ -1,5 +1,6 @@
 package com.github.irybov.operation;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,6 +24,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -118,6 +120,19 @@ class OperationControllerTest {
 	}
 	
 	@Test
+	void try_get_absent_one() throws Exception {
+		
+		when(service.getOne(anyLong())).thenThrow(new NoSuchElementException());
+		
+		mockMVC.perform(get("/operations/{id}", "0"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof NoSuchElementException).isTrue())
+		.andExpect(status().isNotFound());
+		
+		verify(service).getOne(anyLong());
+	}
+	
+	@Test
 	void can_get_list() throws Exception {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
@@ -139,6 +154,20 @@ class OperationControllerTest {
 		
 		assertNotNull(list);
 		assertEquals(size, list.size());
+		
+		verify(service).getList(anyInt());
+	}
+	
+	@Test
+	void try_get_empty_list() throws Exception {
+		
+		when(service.getList(anyInt())).thenReturn(new ArrayList<Operation>());
+		
+		mockMVC.perform(get("/operations/{id}/list", "0"))
+		.andExpect(status().isOk())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$").isEmpty());
 		
 		verify(service).getList(anyInt());
 	}

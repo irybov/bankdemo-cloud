@@ -24,10 +24,12 @@ import org.springframework.core.env.Environment;
 import org.springframework.data.util.Streamable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.github.irybov.shared.AccountDTO;
@@ -47,7 +49,7 @@ import lombok.RequiredArgsConstructor;
 public class AccountService {
 	
 	private final Environment env;
-    private final Validator validator;
+//    private final Validator validator;
     private final BillClient billClient;
 //	private final RestTemplate restTemplate;
 	private final AccountMapper mapStruct;
@@ -56,15 +58,15 @@ public class AccountService {
 	@Transactional
 	public void create(Registration registration) {
 		
-		Set<ConstraintViolation<Registration>> violations = validator.validate(registration);
-		if(violations.isEmpty()) {
+//		Set<ConstraintViolation<Registration>> violations = validator.validate(registration);
+//		if(violations.isEmpty()) {
 			Account account = mapStruct.toDB(registration);
 //			account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
 //				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
 //			account.setActive(true);
 			account.setRoles(Collections.singleton(Role.CLIENT.getName()));
 			jdbc.save(account);
-		}
+//		}
 	};
 	
 	public String generateToken(String header) {
@@ -139,7 +141,11 @@ public class AccountService {
 		jdbc.save(account);
 	}
 	
-	private Account getAccount(String phone) {return jdbc.findByPhone(phone);}
+	Account getAccount(String phone) {
+		Account account = jdbc.findByPhone(phone);
+		if(account != null) return account;
+		throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+	}
 /*	
 	boolean checkFraud(String phone, String header) {
 		

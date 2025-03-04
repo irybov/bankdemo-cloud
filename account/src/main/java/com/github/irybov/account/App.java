@@ -31,7 +31,6 @@ public class App
 	@Bean
 	public Validator localValidatorFactoryBean() {
 	    LocalValidatorFactoryBean bean = new LocalValidatorFactoryBean();	    
-//	    bean.setProviderClass(org.apache.bval.jsr303.ApacheValidationProvider.class);
  		bean.setProviderClass(org.apache.bval.jsr.ApacheValidationProvider.class);
 // 		bean.setProviderClass(org.hibernate.validator.HibernateValidator.class);	   
 	    return bean;

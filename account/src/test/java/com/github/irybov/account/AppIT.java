@@ -117,7 +117,21 @@ public class AppIT {
 	}
 	
 	@Test
-	void context_loading(ApplicationContext context) {assertThat(context).isNotNull();}
+	void context_loading(ApplicationContext context) {
+		assertThat(context).isNotNull();
+		
+		String path = "http://"+uri+":"+port;
+		
+		ResponseEntity<Void> response = 
+				testRestTemplate.getForEntity(path + "/swagger-ui/", Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.TEXT_HTML);
+        
+        response = 
+				testRestTemplate.getForEntity(path + "/v3/api-docs", Void.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.OK));
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+	}
 	
 	@Test
 	void can_create() {
@@ -134,6 +148,36 @@ public class AppIT {
 		ResponseEntity<Void> response = 
 				testRestTemplate.exchange("/accounts", HttpMethod.POST, data, Void.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
+	}
+	
+	@Test
+	void fail_to_create() {
+		
+		Registration registration = new Registration();
+		registration.setName("a");
+		registration.setSurname("");
+		registration.setPhone("aaaaaaaaaa");
+		registration.setEmail("a#mail.io");
+		registration.setBirthday(LocalDate.of(2111, 01, 01));
+		registration.setPassword("superb");
+		
+		HttpEntity<Registration> data = new HttpEntity<>(registration);		
+		ResponseEntity<List<String>> violations = 
+				testRestTemplate.exchange("/accounts", HttpMethod.POST, data, 
+						new ParameterizedTypeReference<List<String>>(){});
+		
+        assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
+        assertThat(violations.getBody().size(), is(10));
+        assertThat(violations.getBody().contains("Name should be 2-20 chars length"), is(true));
+        assertThat(violations.getBody().contains("Please input name like Xx"), is(true));
+        assertThat(violations.getBody().contains("Surname must not be blank"), is(true));
+        assertThat(violations.getBody().contains("Surname should be 2-40 chars length"), is(true));
+        assertThat(violations.getBody().contains("Please input surname like Xx or Xx-Xx"), is(true));
+        assertThat(violations.getBody().contains("Please input phone number like a row of 10 digits"), is(true));
+        assertThat(violations.getBody().contains("Email address is not valid"), is(true));
+        assertThat(violations.getBody().contains("Email address should be 10-60 symbols length"), is(true));
+        assertThat(violations.getBody().contains("Birthday can't be future time"), is(true));
+        assertThat(violations.getBody().contains("Password should be 10-60 symbols length"), is(true));
 	}
 	
 	@Test
@@ -163,6 +207,22 @@ public class AppIT {
 				((Claims) parsedToken.getPayload()).get("scope", Collection.class);
 		
 		assertThat(scopes.size(), is(2));
+	}
+	
+	@Test
+	void try_bad_login() {
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Login", "3333333:ginger");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<List<String>> violations = 
+				testRestTemplate.exchange("/accounts", HttpMethod.HEAD, entity, 
+						new ParameterizedTypeReference<List<String>>(){});
+		assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
+		assertThat(violations.getHeaders().containsKey("Token"), is(false));
+//		assertThat(violations.getBody().size(), is(1));
+//		assertThat(violations.getBody().contains("Header should match pattern"), is(true));
 	}
 	
 	@Test
@@ -221,6 +281,27 @@ public class AppIT {
 	}
 	
 	@Test
+	void try_get_absent_one() {
+		
+		ResponseEntity<AccountDTO> response = 
+				testRestTemplate.getForEntity("/accounts/5555555555", AccountDTO.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.NOT_FOUND));
+		assertThat(response.hasBody(), is(false));
+/*		
+		assertThat(response.hasBody(), is(true));
+		assertThat(response.getBody().getCreatedAt(), nullValue());
+	    assertThat(response.getBody().getUpdatedAt(), nullValue());
+	    assertThat(response.getBody().getBirthday(), nullValue());
+	    assertThat(response.getBody().getName(), nullValue());
+	    assertThat(response.getBody().getSurname(), nullValue());
+	    assertThat(response.getBody().getPhone(), nullValue());
+	    assertThat(response.getBody().getEmail(), nullValue());
+	    assertThat(response.getBody().getBills(), nullValue());
+	    assertThat(response.getBody().isActive(), is(false));
+*/	    
+	}
+	
+	@Test
 	void can_work_on_fault() {
 /*		
 		HttpHeaders headers = new HttpHeaders();
@@ -267,15 +348,32 @@ public class AppIT {
 	@Test
 	void can_change_password() {
 		
-		String password = "terminator";
 		UriComponentsBuilder uriBuilder = 
 				UriComponentsBuilder.fromUriString("/accounts/0000000000")
-    	        .queryParam("password", password);
+    	        .queryParam("password", "terminator");
 		
 		ResponseEntity<Void> response = 
 				testRestTemplate.exchange(uriBuilder.toUriString(), HttpMethod.PATCH, 
 				null, Void.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+	}
+	
+	@Test
+	void try_invalid_password() {
+		
+		UriComponentsBuilder uriBuilder = 
+				UriComponentsBuilder.fromUriString("/accounts/0000000000")
+    	        .queryParam("password", " ");
+		
+		ResponseEntity<List<String>> violations = 
+				testRestTemplate.exchange(uriBuilder.toUriString(), HttpMethod.PATCH, 
+				null, new ParameterizedTypeReference<List<String>>(){});
+		
+        assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
+        assertThat(violations.getBody().size(), is(1));
+//        assertThat(violations.getBody().size(), is(2));
+//        assertThat(violations.getBody().contains("Password must not be blank"), is(true));
+        assertThat(violations.getBody().contains("Password should be 10-60 symbols length"), is(true));
 	}
 	
 	@Test
@@ -325,6 +423,21 @@ public class AppIT {
 //	    mockServer.verify();
 //	    mockServer.reset();
 		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));
+	}
+	
+	@Test
+	void fail_to_add_bill() {
+		
+		UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("/accounts/2222222222/bills")
+    	        .queryParam("currency", "coin");
+		
+        ResponseEntity<List<String>> violations = 
+        		testRestTemplate.exchange(uriBuilder.toUriString(), HttpMethod.POST, null, 
+        				new ParameterizedTypeReference<List<String>>(){});
+        
+        assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
+        assertThat(violations.getBody().size(), is(1));
+        assertThat(violations.getBody().contains("Currency should be 3 capital letters"), is(true));
 	}
 	
 	@Test

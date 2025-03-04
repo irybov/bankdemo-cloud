@@ -1,5 +1,7 @@
 package com.github.irybov.bill;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -18,10 +20,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.stream.Collectors;
+
+import javax.validation.ConstraintViolationException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +39,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -69,10 +76,26 @@ public class BillControllerTest {
 		
 		mockMVC.perform(post("/bills")
 				.param("currency", currency)
-				.param("owner", "0"))
+				.param("owner", "1"))
 		.andExpect(status().isCreated());
 		
 		verify(service).create(anyString(), anyInt());
+	}
+	
+	@Test
+	void fail_creation() throws Exception {
+		
+		mockMVC.perform(post("/bills")
+				.param("currency", "coin")
+				.param("owner", "-1"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof ConstraintViolationException).isTrue())
+		.andExpect(status().isBadRequest())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.length()").value(2))
+		.andExpect(jsonPath("$", hasItem("Currency should be 3 capital letters")))
+		.andExpect(jsonPath("$", hasItem("Owner's id should be positive")));
 	}
 	
 	@Test
@@ -87,6 +110,19 @@ public class BillControllerTest {
 		.andExpect(jsonPath("$.balance").value(0.00))
 		.andExpect(jsonPath("$.currency").value("SEA"))
 		.andExpect(jsonPath("$.isActive").value(true));
+		
+		verify(service).getOne(anyInt());
+	}
+	
+	@Test
+	void try_get_absent_one() throws Exception {
+		
+		when(service.getOne(anyInt())).thenThrow(new NoSuchElementException());
+		
+		mockMVC.perform(get("/bills/{id}", "0"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof NoSuchElementException).isTrue())
+		.andExpect(status().isNotFound());
 		
 		verify(service).getOne(anyInt());
 	}
@@ -110,6 +146,20 @@ public class BillControllerTest {
 	}
 	
 	@Test
+	void try_get_empty_list() throws Exception {
+		
+		when(service.getList(anyInt())).thenReturn(new LinkedList<BillDTO>());
+		
+		mockMVC.perform(get("/bills/{owner}/list", "0"))
+		.andExpect(status().isOk())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$").isEmpty());
+		
+		verify(service).getList(anyInt());
+	}
+	
+	@Test
 	void can_change_status() throws Exception {
 		
 		when(service.changeStatus(anyInt())).thenReturn(false);
@@ -117,6 +167,19 @@ public class BillControllerTest {
 		mockMVC.perform(patch("/bills/{id}/status", "0"))
 		.andExpect(status().isOk())
 		.andExpect(jsonPath("$").isBoolean());
+		
+		verify(service).changeStatus(anyInt());
+	}
+	
+	@Test
+	void try_change_status() throws Exception {
+		
+		when(service.changeStatus(anyInt())).thenThrow(new EmptyResultDataAccessException(1));
+		
+		mockMVC.perform(patch("/bills/{id}/status", "0"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof EmptyResultDataAccessException).isTrue())
+		.andExpect(status().isNotFound());
 		
 		verify(service).changeStatus(anyInt());
 	}

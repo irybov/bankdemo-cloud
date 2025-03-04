@@ -1,7 +1,10 @@
 package com.github.irybov.account;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -42,6 +45,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.github.irybov.shared.AccountDTO;
@@ -52,8 +56,8 @@ public class AccountServiceTest {
 	
 	@Mock
 	private Environment env;
-	@Mock
-	private Validator validator;
+//	@Mock
+//	private Validator validator;
 	@Mock
 	private BillClient billClient;
 //	private RestTemplate restTemplate;
@@ -70,7 +74,7 @@ public class AccountServiceTest {
 	void prepare() {
 		
 		MockitoAnnotations.openMocks(this);
-		service = new AccountService(env, validator, billClient, mapStruct, jdbc);
+		service = new AccountService(env, billClient, mapStruct, jdbc);
 		
 		account = new Account();
 		account.setId(0);
@@ -118,7 +122,7 @@ public class AccountServiceTest {
 	@Test
 	void can_get_one() {
 		
-		Optional<Account> optional = Optional.of(account);
+//		Optional<Account> optional = Optional.of(account);
 /*		
 		when(jdbc.findById(anyInt())).thenReturn(optional);
 		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(AccountDTO.class);
@@ -141,6 +145,22 @@ public class AccountServiceTest {
 //		verify(restTemplate).exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		verify(billClient).getList(anyInt());
+	}
+	
+	@Test
+	void try_get_absent_one() {
+		
+		when(jdbc.findByPhone(anyString())).thenReturn(null);
+		
+		assertThrows(ResponseStatusException.class, () -> service.getAccount(anyString()));
+		assertThatThrownBy(() -> service.getAccount(anyString())).isInstanceOf(ResponseStatusException.class);
+		assertThatExceptionOfType(ResponseStatusException.class).isThrownBy(() -> service.getAccount(anyString()));
+		
+		assertThrows(ResponseStatusException.class, () -> service.getOne(anyString()));
+		assertThatThrownBy(() -> service.getOne(anyString())).isInstanceOf(ResponseStatusException.class);
+		assertThatExceptionOfType(ResponseStatusException.class).isThrownBy(() -> service.getOne(anyString()));
+		
+		verify(jdbc, times(6)).findByPhone(anyString());
 	}
 	
 	@Test

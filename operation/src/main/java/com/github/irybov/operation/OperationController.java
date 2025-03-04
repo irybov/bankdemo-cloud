@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import javax.validation.Valid;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.SortDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,19 +42,20 @@ public class OperationController {
 	private final OperationService service;
 
 	@ApiOperation("Saves money operation")
-	@ApiResponses(value = {@ApiResponse(code = 201, message = "")})
+	@ApiResponses(@ApiResponse(code = 201, message = ""))
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public void save(@Valid @RequestBody OperationDTO dto) {service.save(dto);}
 	
 	@ApiOperation("Gets one operation")
-	@ApiResponses(value = {@ApiResponse(code = 200, message = "", response = Operation.class)})
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = "", response = Operation.class), 
+			@ApiResponse(code = 404, message = "")})
 	@GetMapping("/{id}")
 	public Operation getOne(@PathVariable long id) {return service.getOne(id);}
 	
 	@ApiOperation("Gets list of operations")
-	@ApiResponses(value = {@ApiResponse(code = 200, message = "", 
-			responseContainer = "List", response = Operation.class)})
+	@ApiResponses(@ApiResponse(code = 200, message = "", responseContainer = "List", response = Operation.class))
 	@GetMapping("/{id}/list")
 	public List<Operation> getList(@PathVariable int id) {return service.getList(id);}
 	
@@ -77,5 +81,9 @@ public class OperationController {
 		
 		return service.getPage(id, action, minval, maxval, dateFrom, dateTo, pageable);
 	}
+	
+	@ResponseStatus(code = HttpStatus.NOT_FOUND)
+	@ExceptionHandler
+	protected void handleException(NoSuchElementException e){}
 	
 }

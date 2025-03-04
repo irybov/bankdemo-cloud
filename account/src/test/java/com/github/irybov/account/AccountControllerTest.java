@@ -1,5 +1,7 @@
 package com.github.irybov.account;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.refEq;
@@ -27,6 +29,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.validation.ConstraintViolationException;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,9 +40,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.AccountDTO;
@@ -96,6 +103,38 @@ public class AccountControllerTest {
 	}
 	
 	@Test
+	void fail_to_create() throws Exception {
+		
+		Registration registration = new Registration();
+		registration.setName("a");
+		registration.setSurname("");
+		registration.setPhone("aaaaaaaaaa");
+		registration.setEmail("a#mail.io");
+		registration.setBirthday(LocalDate.of(2111, 01, 01));
+		registration.setPassword("superb");
+		
+		mockMVC.perform(post("/accounts")
+		.contentType(MediaType.APPLICATION_JSON)
+		.content(mapper.writeValueAsString(registration)))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof MethodArgumentNotValidException).isTrue())
+		.andExpect(status().isBadRequest())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.length()").value(10))
+		.andExpect(jsonPath("$", hasItem("Name should be 2-20 chars length")))
+		.andExpect(jsonPath("$", hasItem("Please input name like Xx")))
+		.andExpect(jsonPath("$", hasItem("Surname must not be blank")))
+		.andExpect(jsonPath("$", hasItem("Surname should be 2-40 chars length")))
+		.andExpect(jsonPath("$", hasItem("Please input surname like Xx or Xx-Xx")))
+		.andExpect(jsonPath("$", hasItem("Please input phone number like a row of 10 digits")))
+		.andExpect(jsonPath("$", hasItem("Email address is not valid")))
+		.andExpect(jsonPath("$", hasItem("Email address should be 10-60 symbols length")))
+		.andExpect(jsonPath("$", hasItem("Birthday can't be future time")))
+		.andExpect(jsonPath("$", hasItem("Password should be 10-60 symbols length")));
+	}
+	
+	@Test
 	void can_get_token() throws Exception {
 		
 		when(service.generateToken(anyString())).thenReturn("token");
@@ -106,6 +145,20 @@ public class AccountControllerTest {
 		.andExpect(status().isOk());
 		
 		verify(service).generateToken(anyString());
+	}
+	
+	@Test
+	void try_bad_login() throws Exception {
+		
+		mockMVC.perform(head("/accounts")
+		.header("Login", "00000:super"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof ConstraintViolationException).isTrue())
+		.andExpect(status().isBadRequest())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON));
+//		.andExpect(jsonPath("$").isArray())
+//		.andExpect(jsonPath("$.length()").value(1))
+//		.andExpect(jsonPath("$", hasItem("Header should match pattern")));
 	}
 	
 	@Test
@@ -142,6 +195,20 @@ public class AccountControllerTest {
 		verify(service).getOne(anyString());
 //		verify(service).checkFraud(anyString(), anyString());
 	}
+	
+	@Test
+	void try_get_absent_one() throws Exception {
+		
+		when(service.getOne(anyString()))
+			.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+		
+		mockMVC.perform(get("/accounts/{phone}", "0000000000"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof ResponseStatusException).isTrue())
+		.andExpect(status().isNotFound());
+		
+		verify(service).getOne(anyString());
+	}
 
 	@Test
 	void can_get_all() throws Exception {
@@ -174,6 +241,21 @@ public class AccountControllerTest {
 	}
 	
 	@Test
+	void try_invalid_password() throws Exception {
+		
+		mockMVC.perform(patch("/accounts/{phone}", "0000000000")
+				.param("password", " "))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof ConstraintViolationException).isTrue())
+		.andExpect(status().isBadRequest())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.length()").value(2))
+		.andExpect(jsonPath("$", hasItem("Password must not be blank")))
+		.andExpect(jsonPath("$", hasItem("Password should be 10-60 symbols length")));
+	}
+	
+	@Test
 	void can_add_bill() throws Exception {
 		
 		BillDTO bill = new BillDTO();		
@@ -188,6 +270,21 @@ public class AccountControllerTest {
 		
 		verify(service).addBill(anyString(), anyString());
 //		verify(service).checkFraud(anyString(), anyString());
+	}
+	
+	@Test
+	void fail_to_add_bill() throws Exception {
+		
+		mockMVC.perform(post("/accounts/{phone}/bills", "0000000000")
+//				.header(HttpHeaders.AUTHORIZATION, "jwt")
+				.param("currency", "coin"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof ConstraintViolationException).isTrue())
+		.andExpect(status().isBadRequest())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.length()").value(1))
+		.andExpect(jsonPath("$", hasItem("Currency should be 3 capital letters")));
 	}
 	
 	@Test
