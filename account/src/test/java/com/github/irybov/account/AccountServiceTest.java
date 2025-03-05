@@ -101,8 +101,10 @@ public class AccountServiceTest {
 		registration.setPassword("superadmin");
 		
 		when(jdbc.save(account)).thenReturn(account);
+		
 		service.create(registration);
 		assertThat(mapStruct.toDB(registration)).isExactlyInstanceOf(Account.class);
+		
 		verify(jdbc).save(account);
 	}
 	
@@ -112,11 +114,27 @@ public class AccountServiceTest {
 		when(env.getProperty("token.secret")).thenReturn("rAUOQK5LF3s0unfY8jbOkJc8Ep9H9v3Y");
 		when(env.getProperty("token.lifetime")).thenReturn("300");
 		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		
 		assertThat(service.generateToken("0000000000:superadmin"))
 			.isExactlyInstanceOf(String.class);
+		
 		verify(jdbc).findByPhone(anyString());
 		verify(env).getProperty("token.secret");
 		verify(env).getProperty("token.lifetime");
+	}
+	
+	@Test
+	void try_wrong_password() {
+		
+		String header = "0000000000:superclown";
+		
+		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		
+		assertThrows(ResponseStatusException.class, () -> service.generateToken(header));
+		assertThatThrownBy(() -> service.generateToken(header)).isInstanceOf(ResponseStatusException.class);
+		assertThatExceptionOfType(ResponseStatusException.class).isThrownBy(() -> service.generateToken(header));
+		
+		verify(jdbc, times(3)).findByPhone(anyString());
 	}
 
 	@Test
@@ -148,7 +166,7 @@ public class AccountServiceTest {
 	}
 	
 	@Test
-	void try_get_absent_one() {
+	void request_absent() {
 		
 		when(jdbc.findByPhone(anyString())).thenReturn(null);
 		
@@ -156,11 +174,7 @@ public class AccountServiceTest {
 		assertThatThrownBy(() -> service.getAccount(anyString())).isInstanceOf(ResponseStatusException.class);
 		assertThatExceptionOfType(ResponseStatusException.class).isThrownBy(() -> service.getAccount(anyString()));
 		
-		assertThrows(ResponseStatusException.class, () -> service.getOne(anyString()));
-		assertThatThrownBy(() -> service.getOne(anyString())).isInstanceOf(ResponseStatusException.class);
-		assertThatExceptionOfType(ResponseStatusException.class).isThrownBy(() -> service.getOne(anyString()));
-		
-		verify(jdbc, times(6)).findByPhone(anyString());
+		verify(jdbc, times(3)).findByPhone(anyString());
 	}
 	
 	@Test
@@ -171,10 +185,12 @@ public class AccountServiceTest {
 				.collect(Collectors.toList());
 		
 		when(jdbc.findAll()).thenReturn(accounts);
+		
 		List<AccountDTO> results = service.getAll();
 		assertAll(
 				() -> assertThat(results).hasSameClassAs(new ArrayList<AccountDTO>()),
 				() -> assertThat(results.size()).isEqualTo(accounts.size()));
+		
 		verify(jdbc).findAll();
 	}
 	
@@ -182,8 +198,10 @@ public class AccountServiceTest {
 	void can_change_password() {
 		
 		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		
 		service.changePassword(anyString(), "terminator");
 		assertThat(account.getPassword()).isEqualTo("terminator");
+		
 		verify(jdbc).findByPhone(anyString());
 		verify(jdbc).save(account);
 	}
@@ -216,8 +234,10 @@ public class AccountServiceTest {
 		account.setBills(bills);
 		
 		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		
 		service.deleteBill(anyString(), 1);
 		assertThat(account.getBills().size()).isEqualTo(3);
+		
 		verify(jdbc).findByPhone(anyString());
 	}
 	

@@ -73,7 +73,7 @@ public class AccountService {
 		
 		String[] login = header.split(":");
 		Account account = getAccount(login[0]);
-		if(account != null && account.getPassword().equals(login[1])) {
+		if(account.getPassword().equals(login[1])) {
 			SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
 					SignatureAlgorithm.HS256.getJcaName());
 //					Jwts.SIG.HS256);
@@ -89,7 +89,7 @@ public class AccountService {
 					.compact();
 			return token;
 		}
-		return null;
+		throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password provided");
 	};
 	
 //	public AccountDTO getOne(int id) {return mapStruct.toDTO(jdbc.findById(id).get());}
@@ -144,7 +144,8 @@ public class AccountService {
 	Account getAccount(String phone) {
 		Account account = jdbc.findByPhone(phone);
 		if(account != null) return account;
-		throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+				String.format("Account with phone %s not found ", phone));
 	}
 /*	
 	boolean checkFraud(String phone, String header) {

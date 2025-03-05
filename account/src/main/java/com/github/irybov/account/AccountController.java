@@ -1,5 +1,6 @@
 package com.github.irybov.account;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -150,8 +151,8 @@ public class AccountController {
     }
     
     @ExceptionHandler(ResponseStatusException.class)
-    protected void handleSearchingException(ResponseStatusException e, HttpServletResponse res) {
-    	res.setStatus(e.getRawStatusCode());
+    protected ResponseEntity<String> handleSearchingException(ResponseStatusException e) {
+    	return new ResponseEntity<String>(e.getReason(), e.getStatus());
     }
     
 }

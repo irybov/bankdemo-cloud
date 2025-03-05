@@ -213,7 +213,7 @@ public class AppIT {
 	void try_bad_login() {
 		
 		HttpHeaders headers = new HttpHeaders();
-		headers.set("Login", "3333333:ginger");
+		headers.set("Login", "333333:ginger");
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<List<String>> violations = 
@@ -223,6 +223,20 @@ public class AppIT {
 		assertThat(violations.getHeaders().containsKey("Token"), is(false));
 //		assertThat(violations.getBody().size(), is(1));
 //		assertThat(violations.getBody().contains("Header should match pattern"), is(true));
+	}
+	
+	@Test
+	void try_wrong_password() {
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Login", "3333333333:gingerfreak");
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<String> response = 
+				testRestTemplate.exchange("/accounts", HttpMethod.HEAD, entity, String.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.UNAUTHORIZED));
+		assertThat(response.getHeaders().containsKey("Token"), is(false));
+//		assertThat(response.getBody().contains("Wrong password provided"), is(true));
 	}
 	
 	@Test
@@ -281,12 +295,13 @@ public class AppIT {
 	}
 	
 	@Test
-	void try_get_absent_one() {
+	void request_absent() {
 		
-		ResponseEntity<AccountDTO> response = 
-				testRestTemplate.getForEntity("/accounts/5555555555", AccountDTO.class);
+		ResponseEntity<String> response = 
+				testRestTemplate.getForEntity("/accounts/5555555555", String.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.NOT_FOUND));
-		assertThat(response.hasBody(), is(false));
+		assertThat(response.getBody().contains("Account with phone 5555555555 not found"), is(true));
+//		assertThat(response.hasBody(), is(false));
 /*		
 		assertThat(response.hasBody(), is(true));
 		assertThat(response.getBody().getCreatedAt(), nullValue());

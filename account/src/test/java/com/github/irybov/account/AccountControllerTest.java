@@ -162,14 +162,30 @@ public class AccountControllerTest {
 	}
 	
 	@Test
+	void try_wrong_password() throws Exception {
+		
+		when(service.generateToken(anyString()))
+		.thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password provided"));
+		
+		mockMVC.perform(head("/accounts")
+		.header("Login", "0000000000:superclown"))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof ResponseStatusException).isTrue())
+		.andExpect(status().isUnauthorized());
+//		.andExpect(content().string("Wrong password provided"));
+		
+		verify(service).generateToken(anyString());
+	}
+	
+	@Test
 	void can_get_one() throws Exception {
 		
 		AccountDTO dto = mapStruct.toDTO(account);		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<BillDTO> bills = Stream.generate(() -> new BillDTO()).limit(size)
 				.collect(Collectors.toList());
-		int i = 1;
-		for(BillDTO bill : bills) {bill.setId(new Integer(i++));}
+		int i = 0;
+		for(BillDTO bill : bills) {bill.setId(new Integer(++i));}
 		dto.setBills(new HashSet<>(bills));
 		
 //		when(service.getOne(anyInt())).thenReturn(mapStruct.toDTO(account));
@@ -197,15 +213,17 @@ public class AccountControllerTest {
 	}
 	
 	@Test
-	void try_get_absent_one() throws Exception {
+	void request_absent() throws Exception {
 		
 		when(service.getOne(anyString()))
-			.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+			.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, 
+					"Account with phone 0000000000 not found"));
 		
 		mockMVC.perform(get("/accounts/{phone}", "0000000000"))
 		.andExpect(result -> assertThat
 				(result.getResolvedException() instanceof ResponseStatusException).isTrue())
-		.andExpect(status().isNotFound());
+		.andExpect(status().isNotFound())
+		.andExpect(content().string("Account with phone 0000000000 not found"));
 		
 		verify(service).getOne(anyString());
 	}
@@ -216,6 +234,7 @@ public class AccountControllerTest {
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
 		List<Account> accounts = Collections.nCopies(size, account).stream()
 				.collect(Collectors.toList());
+		
 		when(service.getAll()).thenReturn(mapStruct.toList(accounts));
 		
 		mockMVC.perform(get("/accounts"))
