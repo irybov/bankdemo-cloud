@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -147,6 +148,26 @@ class AppIT {
 	}
 	
 	@Test
+	void fail_to_save() {
+		
+		OperationDTO operation = new OperationDTO(-0.01, null, "coin", -4, 1_000_000_000, " ");
+		HttpEntity<OperationDTO> entity = new HttpEntity<>(operation);
+		
+		ResponseEntity<List<String>> violations = 
+				testRestTemplate.exchange("/operations", HttpMethod.POST, entity, 
+						new ParameterizedTypeReference<List<String>>(){});
+		
+	    assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
+        assertThat(violations.getBody().size(), is(6));
+        assertThat(violations.getBody().contains("Amount of money should be higher than zero"), is(true));
+        assertThat(violations.getBody().contains("Action must not be null"), is(true));
+        assertThat(violations.getBody().contains("Currency code should be 3 capital characters length"), is(true));
+        assertThat(violations.getBody().contains("Sender's bill number should be positive"), is(true));
+        assertThat(violations.getBody().contains("Recepient's bill number should be less than 10 digits length"), is(true));
+        assertThat(violations.getBody().contains("Bank's name must not be blank"), is(true));
+	}
+	
+	@Test
 	void can_get_one() {
 		
 		ResponseEntity<Operation> response = 
@@ -174,7 +195,7 @@ class AppIT {
 	}
 	
 	@Test
-	void try_get_absent_one() {
+	void request_absent() {
 		
 		ResponseEntity<Operation> response = 
 				testRestTemplate.getForEntity("/operations/10", Operation.class);

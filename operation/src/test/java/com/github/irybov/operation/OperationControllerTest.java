@@ -1,6 +1,7 @@
 package com.github.irybov.operation;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,7 +45,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 
@@ -92,6 +95,27 @@ class OperationControllerTest {
 	}
 	
 	@Test
+	void fail_to_save() throws Exception {
+		
+		mockMVC.perform(post("/operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(mapper.writeValueAsString(
+						new OperationDTO(-0.01, null, "coin", -4, 1_000_000_000, " "))))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof MethodArgumentNotValidException).isTrue())
+		.andExpect(status().isBadRequest())
+		.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.length()").value(6))
+		.andExpect(jsonPath("$", hasItem("Amount of money should be higher than zero")))
+		.andExpect(jsonPath("$", hasItem("Action must not be null")))
+		.andExpect(jsonPath("$", hasItem("Currency code should be 3 capital characters length")))
+		.andExpect(jsonPath("$", hasItem("Sender's bill number should be positive")))
+		.andExpect(jsonPath("$", hasItem("Recepient's bill number should be less than 10 digits length")))
+		.andExpect(jsonPath("$", hasItem("Bank's name must not be blank")));
+	}
+	
+	@Test
 	void can_get_one() throws Exception {
 		
 //		Operation.OperationBuilder builder = Operation.builder();
@@ -120,7 +144,7 @@ class OperationControllerTest {
 	}
 	
 	@Test
-	void try_get_absent_one() throws Exception {
+	void request_absent() throws Exception {
 		
 		when(service.getOne(anyLong())).thenThrow(new NoSuchElementException());
 		

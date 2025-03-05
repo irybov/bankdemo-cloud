@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -17,6 +18,8 @@ import org.springframework.data.web.SortDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -85,5 +88,14 @@ public class OperationController {
 	@ResponseStatus(code = HttpStatus.NOT_FOUND)
 	@ExceptionHandler
 	protected void handleException(NoSuchElementException e){}
+	
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    protected ResponseEntity<List<String>> handleArgumentsException(MethodArgumentNotValidException e) {
+	    List<String> errors = new ArrayList<String>();
+	    for(FieldError error : e.getBindingResult().getFieldErrors()) {
+	        errors.add(error.getDefaultMessage());
+	    }
+        return ResponseEntity.badRequest().body(errors);
+    }
 	
 }

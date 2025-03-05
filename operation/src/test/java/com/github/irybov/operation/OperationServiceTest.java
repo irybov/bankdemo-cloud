@@ -88,6 +88,25 @@ class OperationServiceTest {
 	}
 	
 	@Test
+		void can_save() {
+			
+	//		doNothing().when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+	    	doAnswer(new Answer<Void>() {
+				@Override
+				public Void answer(InvocationOnMock invocation) {return null;}})
+	    	.when(billClient).updateBalance(any(Map.class));
+	//    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
+			when(jdbc.save(any(Operation.class))).thenReturn(new Operation());
+			
+			service.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
+					new Random().nextInt(), new Random().nextInt(), "Demo"));
+			
+			verify(jdbc).save(any(Operation.class));
+			verify(billClient).updateBalance(any(Map.class));
+	//		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+		}
+
+	@Test
 	void can_build() {
 		
 		String currency = "SEA";
@@ -116,7 +135,7 @@ class OperationServiceTest {
 	}
 	
 	@Test
-	void try_get_absent_one() {
+	void request_absent() {
 		Optional<Operation> optional = Optional.empty();
 		when(jdbc.findById(anyLong())).thenReturn(optional);
 		assertThrows(NoSuchElementException.class, () -> service.getOne(anyLong()));
@@ -200,26 +219,7 @@ class OperationServiceTest {
 //		verify(jdbcTemplate).queryForObject(anyString(), eq(Long.class));
 	}
 	
-	@Test
-	void can_save() {
-		
-//		doNothing().when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
-    	doAnswer(new Answer<Void>() {
-			@Override
-			public Void answer(InvocationOnMock invocation) {return null;}})
-    	.when(billClient).updateBalance(any(Map.class));
-//    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
-		when(jdbc.save(any(Operation.class))).thenReturn(new Operation());
-		
-		service.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
-				new Random().nextInt(), new Random().nextInt(), "Demo"));
-		
-		verify(jdbc).save(any(Operation.class));
-		verify(billClient).updateBalance(any(Map.class));
-//		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
-	}
-	
-    @AfterEach
+	@AfterEach
     void tear_down() throws Exception {
     	autoClosable.close();
     	service = null;
