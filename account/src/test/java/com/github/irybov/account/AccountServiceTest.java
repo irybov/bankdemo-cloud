@@ -198,6 +198,7 @@ public class AccountServiceTest {
 	void can_change_password() {
 		
 		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		when(jdbc.save(account)).thenReturn(account);
 		
 		service.changePassword(anyString(), "terminator");
 		assertThat(account.getPassword()).isEqualTo("terminator");

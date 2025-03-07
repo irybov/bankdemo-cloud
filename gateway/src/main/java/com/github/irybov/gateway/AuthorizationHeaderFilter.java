@@ -69,14 +69,16 @@ AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
 			if(!variables.isEmpty()) {
 				String phone = variables.get("phone");
 				if(checkFraud(phone, jwt)) 
-		        	return onError(exchange,"User is not authorized to perform this operation", HttpStatus.FORBIDDEN);
+		        	return onError(exchange, "Provided phone does not match expected", HttpStatus.FORBIDDEN);
 			}
+			if(!isActive(jwt))
+				return onError(exchange, "This account is currently disabled", HttpStatus.FORBIDDEN);
 			
 			List<String> authorities = getAuthorities(jwt);
 	        boolean hasRequiredAuthority = authorities.stream()
 	        		.anyMatch(authority -> config.getAuthorities().contains(authority));
 	        if(!hasRequiredAuthority) 
-	        	return onError(exchange,"User is not authorized to perform this operation", HttpStatus.FORBIDDEN);
+	        	return onError(exchange, "User is not authorized to perform this operation", HttpStatus.FORBIDDEN);
 			
 			return chain.filter(exchange);
 		};
@@ -115,6 +117,20 @@ AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
 		}
 		catch (Exception ex) {return returnValue;}
 		return returnValue;
+	}
+	
+	private boolean isActive(String jwt) {
+		
+		String tokenSecret = env.getProperty("token.secret");
+		byte[] secretKeyBytes = tokenSecret.getBytes();
+		SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
+
+		JwtParser parser = Jwts.parser()
+                .verifyWith(secretKey)
+                .build();
+		
+		Jws<Claims> parsedToken = parser.parseSignedClaims(jwt);
+		return ((Claims) parsedToken.getPayload()).get("active", Boolean.class);
 	}
 	
 	private boolean checkFraud(String phone, String jwt) {

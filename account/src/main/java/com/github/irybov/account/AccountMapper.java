@@ -3,6 +3,7 @@ package com.github.irybov.account;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.List;
 
 import org.mapstruct.AfterMapping;
@@ -30,6 +31,7 @@ public interface AccountMapper {
 	default void initialize(@MappingTarget Account account) {
 		account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
 			.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
-		account.setActive(true);
+//		account.setActive(true);
+		account.setRoles(Collections.singleton(Role.CLIENT.getName()));
 	}
 }

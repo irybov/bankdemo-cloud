@@ -69,6 +69,7 @@ public class AccountJDBCTest {
 		account.setRoles(Collections.singleton(Role.CLIENT.getName()));
 		
 		account = jdbc.save(account);
+		assertThat(account.isActive() == false);
 		assertThat(account.getBills() == null);
 		assertThat(account.getRoles().size() == 1);
 		

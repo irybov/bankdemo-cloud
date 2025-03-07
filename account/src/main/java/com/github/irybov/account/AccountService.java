@@ -64,7 +64,7 @@ public class AccountService {
 //			account.setCreatedAt(Timestamp.valueOf(OffsetDateTime.now()
 //				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
 //			account.setActive(true);
-			account.setRoles(Collections.singleton(Role.CLIENT.getName()));
+//			account.setRoles(Collections.singleton(Role.CLIENT.getName()));
 			jdbc.save(account);
 //		}
 	};
@@ -80,6 +80,7 @@ public class AccountService {
 			Instant now = Instant.now();
 			String token = Jwts.builder()
 					.claim("scope", account.getRoles())
+					.claim("active", account.isActive())
 					.subject(account.getPhone())
 					.issuer("bankdemo")
 					.expiration(Date.from(now.plusSeconds(

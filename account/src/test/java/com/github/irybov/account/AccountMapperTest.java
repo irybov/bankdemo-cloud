@@ -86,7 +86,7 @@ public class AccountMapperTest {
 		
 		Account account = mapStruct.toDB(registration);
 		assertAll(
-			() -> assertEquals(true, account.isActive()), 
+			() -> assertEquals(false, account.isActive()), 
 			() -> assertNull(account.getBills()), 
 			() -> assertEquals(registration.getBirthday(), account.getBirthday()), 
 			() -> assertEquals(registration.getEmail(), account.getEmail()), 

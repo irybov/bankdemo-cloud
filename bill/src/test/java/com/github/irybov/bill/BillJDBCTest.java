@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -111,9 +113,18 @@ public class BillJDBCTest {
 	@Test
 	void can_update_balance() {
 		
+		Map<Integer, Double> data = new LinkedHashMap<>();
+		data.put(1, 5.00);
+		data.put(5, 1.00);
+		
+		List<Bill> bills = jdbc.findByIdIn(data.keySet());
+		bills.forEach(bill -> bill.update(data.get(bill.getId())));
+		assertThat(bills.get(0).getBalance().doubleValue() == 15.00);
+		
+		jdbc.saveAll(bills);		
 		Bill bill = jdbc.findById(1).get();
-		bill.update(5.00);
-		bill = jdbc.save(bill);
+//		bill.update(5.00);
+//		bill = jdbc.save(bill);
 		assertThat(bill.getBalance().doubleValue() == 15.00);
 		
 		bill.update(-20.00);

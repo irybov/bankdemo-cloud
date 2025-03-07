@@ -82,13 +82,14 @@ public class AppIT {
 		WireMock.configureFor(internalURL, 8761);
 	}
 	
-	private String generateJWT(Set<String> scopes, String phone) {
+	private String generateJWT(Set<String> scopes, String phone, boolean active) {
 		
 		SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
 				SignatureAlgorithm.HS256.getJcaName());
 		Instant now = Instant.now();
 		String token = Jwts.builder()
 				.claim("scope", scopes)
+				.claim("active", active)
 				.subject(phone)
 				.issuer("bankdemo")
 				.expiration(Date.from(now.plusSeconds(
@@ -132,7 +133,7 @@ public class AppIT {
 		wireMockServer.stubFor(WireMock.head(WireMock.urlPathEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.OK.value())
-				.withHeader("Token", generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"))));
+				.withHeader("Token", generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000", true))));
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", login);
@@ -145,6 +146,54 @@ public class AppIT {
 		
 		wireMockServer.verify(WireMock.headRequestedFor(WireMock.urlPathEqualTo(requestURI))
 												.withHeader("Login", WireMock.equalTo(login)));
+	}
+	
+	@Test
+	void try_disabled_user() {
+		
+		String requestURI = "/accounts/4444444444";
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(new HashSet<>(Collections.singleton("ROLE_CLIENT")), "4444444444", false));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<String> response = 
+				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.FORBIDDEN));
+		assertThat(response.getBody().contains( "This account is currently disabled"), is(true));
+	}
+	
+	@Test
+	void try_stop_fraudster() {
+		
+		String requestURI = "/accounts/5555555555";
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(new HashSet<>(Collections.singleton("ROLE_CLIENT")), "4444444444", true));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<String> response = 
+				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.FORBIDDEN));
+		assertThat(response.getBody().contains( "Provided phone does not match expected"), is(true));
+	}
+	
+	@Test
+	void try_wrong_scope() {
+		
+		String requestURI = "/accounts/4444444444";
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
+				generateJWT(new HashSet<>(Collections.singleton("ROLE_ROGUE")), "4444444444", true));
+		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
+		
+		ResponseEntity<String> response = 
+				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.FORBIDDEN));
+		assertThat(response.getBody().contains( "User is not authorized to perform this operation"), is(true));
 	}
 	
 	@Test
@@ -167,7 +216,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT")), "3333333333"));
+				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT")), "3333333333", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<AccountDTO> response = 
@@ -196,7 +245,7 @@ public class AppIT {
 	
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<List<AccountDTO>> response = 
@@ -224,7 +273,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT")), "3333333333"));
+				generateJWT(new HashSet<>(Arrays.asList("ROLE_ADMIN", "ROLE_CLIENT")), "3333333333", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<Void> response = 
@@ -255,7 +304,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_CLIENT"), "1111111111"));
+				generateJWT(Collections.singleton("ROLE_CLIENT"), "1111111111", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
         BillDTO dto = testRestTemplate.postForObject(requestURI, entity, BillDTO.class);
@@ -276,7 +325,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_CLIENT"), "2222222222"));
+				generateJWT(Collections.singleton("ROLE_CLIENT"), "2222222222", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<Void> response = 
@@ -403,7 +452,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<Boolean> response = 
@@ -450,7 +499,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<String> response = 
@@ -488,7 +537,7 @@ public class AppIT {
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + 
-				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000"));
+				generateJWT(Collections.singleton("ROLE_ADMIN"), "0000000000", true));
 		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
 		
 		ResponseEntity<String> response = 
