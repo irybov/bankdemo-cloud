@@ -19,13 +19,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.validation.ConstraintViolationException;
 
@@ -131,8 +134,13 @@ public class BillControllerTest {
 	void can_get_list() throws Exception {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<BillDTO> bills = Collections.nCopies(size, bill).stream()
+		List<BillDTO> list = 
+//				Collections.nCopies(size, bill).stream()
+				Stream.generate(() -> new BillDTO()).limit(size)
 				.collect(Collectors.toList());
+		int i = 0;
+		for(BillDTO bill : list) bill.setId(new Integer(++i));
+		Set<BillDTO> bills = new HashSet<>(list);
 		
 		when(service.getList(anyInt())).thenReturn(bills);
 		
@@ -148,7 +156,8 @@ public class BillControllerTest {
 	@Test
 	void try_get_empty_list() throws Exception {
 		
-		when(service.getList(anyInt())).thenReturn(new LinkedList<BillDTO>());
+//		when(service.getList(anyInt())).thenReturn(new LinkedList<BillDTO>());
+		when(service.getList(anyInt())).thenReturn(new HashSet<BillDTO>());
 		
 		mockMVC.perform(get("/bills/{owner}/list", "0"))
 		.andExpect(status().isOk())

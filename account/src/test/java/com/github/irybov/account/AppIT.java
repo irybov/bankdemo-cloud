@@ -16,8 +16,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,6 +37,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -61,6 +65,7 @@ import com.github.irybov.shared.BillDTO;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.hazelcast.spring.cache.HazelcastCacheManager;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -72,18 +77,19 @@ import io.jsonwebtoken.security.Keys;
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
 public class AppIT {
-/*	
-	@Autowired
-	private RestTemplate restTemplate;
+	
+    @Autowired
+    private CacheManager cacheManager;
+/*
 	@TestConfiguration
-	static class RestTemplateConfig {
+	static class CacheManagerConfig {
 		@Bean
 	    @Primary
-		public RestTemplate restTemplate() {
-			return new RestTemplate();
+		public CacheManager CacheManager() {
+			return new HazelcastCacheManager();
 		}		
 	}
-*/	
+*/
 	@Autowired
 	private TestRestTemplate testRestTemplate;
 	@Autowired
@@ -101,8 +107,8 @@ public class AppIT {
 	@Value("${local.server.port}")
 	private int port;
 	
-	@Value("${app.internal-url}")
-	private static String internalURL;
+//	@Value("${app.internal-url}")
+//	private static String internalURL;
 	private static WireMockServer wireMockServer;
 	
 	@BeforeAll
@@ -113,7 +119,7 @@ public class AppIT {
 //		mockServer = MockRestServiceServer.createServer(restTemplate);
 		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
 		wireMockServer.start();
-		WireMock.configureFor(internalURL, 8761);
+		WireMock.configureFor("localhost", 8761);
 	}
 	
 	@Test
@@ -344,6 +350,35 @@ public class AppIT {
 	    assertThat(response.getBody().getBills(), notNullValue());
 	    assertThat(response.getBody().getBills().isEmpty(), is(true));
 	    assertThat(response.getBody().isActive(), is(true));
+	}
+	
+	@Test
+	void can_get_cached_bills() {
+		
+		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
+		List<BillDTO> bills = Stream.generate(() -> new BillDTO()).limit(size)
+				.collect(Collectors.toList());
+		int i = 1;
+		for(BillDTO bill : bills) {bill.setId(new Integer(i++));}
+		Set<BillDTO> list = new HashSet<>(bills);
+		
+		Cache cache = cacheManager.getCache("sets");
+		cache.put(2, list);
+		
+		ResponseEntity<AccountDTO> response = 
+				testRestTemplate.getForEntity("/accounts/1111111111", AccountDTO.class);
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+	    assertThat(response.getBody().getUpdatedAt(), nullValue());
+	    assertThat(response.getBody().getBirthday(), notNullValue(LocalDate.class));
+	    assertThat(response.getBody().getName(), is("Kae"));
+	    assertThat(response.getBody().getSurname(), is("Yukawa"));
+	    assertThat(response.getBody().getPhone(), is("1111111111"));
+	    assertThat(response.getBody().getEmail(), is("yukawa@greenmail.io"));
+	    assertThat(response.getBody().getBills(), notNullValue());
+	    assertThat(response.getBody().getBills().size(), is(size));
+	    assertThat(response.getBody().isActive(), is(true));
+	    
+	    cache.evictIfPresent(2);
 	}
 	
 	@Test

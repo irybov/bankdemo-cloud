@@ -82,8 +82,8 @@ class AppIT {
 	@Value("${local.server.port}")
 	private int port;
 	
-	@Value("${app.internal-url}")
-	private static String internalURL;
+//	@Value("${app.internal-url}")
+//	private static String internalURL;
 	private static WireMockServer wireMockServer;
 	
 	@BeforeAll
@@ -94,7 +94,7 @@ class AppIT {
 //		mockServer = MockRestServiceServer.createServer(restTemplate);
 		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
 		wireMockServer.start();
-		WireMock.configureFor(internalURL, 8761);
+		WireMock.configureFor("localhost", 8761);
 	}
 	
 	@Test

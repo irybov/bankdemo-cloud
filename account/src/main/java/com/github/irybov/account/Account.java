@@ -1,10 +1,13 @@
 package com.github.irybov.account;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Set;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -18,14 +21,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(of = "phone", cacheStrategy = CacheStrategy.NEVER)
 @Table(schema="bankdemo", name="accounts")
-public class Account {
+public class Account implements Serializable {
 	
 	@Id
 	@Column("id")
 	private Integer id;
+	@CreatedDate
 	@Column("created_at")
 	@NonNull
 	private Timestamp createdAt;
+	@LastModifiedDate
 	@Column("updated_at")
 	private Timestamp updatedAt;
 	@Column("is_active")

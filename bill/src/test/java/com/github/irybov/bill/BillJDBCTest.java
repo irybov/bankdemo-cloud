@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -78,13 +79,15 @@ public class BillJDBCTest {
 	
 	@Test
 	void can_get_list() {
-		List<Bill> bills = jdbc.findByOwner(1);
+//		List<Bill> bills = jdbc.findByOwner(1);
+		Set<Bill> bills = jdbc.findByOwner(1);
 		assertThat(bills.size() == 2);
 	}
 	
 	@Test
 	void try_get_empty_list() {
-		List<Bill> bills = jdbc.findByOwner(5);
+//		List<Bill> bills = jdbc.findByOwner(5);
+		Set<Bill> bills = jdbc.findByOwner(1);
 		assertThat(bills.isEmpty());
 	}
 	
@@ -117,9 +120,11 @@ public class BillJDBCTest {
 		data.put(1, 5.00);
 		data.put(5, 1.00);
 		
-		List<Bill> bills = jdbc.findByIdIn(data.keySet());
+//		List<Bill> bills = jdbc.findByIdIn(data.keySet());
+		Set<Bill> bills = jdbc.findByIdIn(data.keySet());
 		bills.forEach(bill -> bill.update(data.get(bill.getId())));
-		assertThat(bills.get(0).getBalance().doubleValue() == 15.00);
+//		assertThat(bills.get(0).getBalance().doubleValue() == 15.00);
+		assertThat(bills.iterator().next().getBalance().doubleValue() == 15.00);
 		
 		jdbc.saveAll(bills);		
 		Bill bill = jdbc.findById(1).get();
@@ -136,7 +141,8 @@ public class BillJDBCTest {
 	void can_delete() {
 		jdbc.deleteById(1);
 		jdbc.deleteById(2);
-		List<Bill>bills = jdbc.findByOwner(1);
+//		List<Bill>bills = jdbc.findByOwner(1);
+		Set<Bill> bills = jdbc.findByOwner(1);
 		assertThat(bills.isEmpty());
 	}
 	

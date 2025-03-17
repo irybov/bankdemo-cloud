@@ -10,7 +10,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface BillJDBC extends CrudRepository<Bill, Integer> {
 	
-	List<Bill> findByOwner(Integer owner);
-	
-	List<Bill> findByIdIn(Collection<Integer> ids);
+//	List<Bill> findByOwner(Integer owner);
+	Set<Bill> findByOwner(Integer owner);
+//	List<Bill> findByIdIn(Set<Integer> ids);
+	Set<Bill> findByIdIn(Set<Integer> ids);
 }

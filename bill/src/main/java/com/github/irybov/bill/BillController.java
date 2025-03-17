@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
@@ -68,9 +69,11 @@ public class BillController {
 	public BillDTO getOne(@PathVariable int id) {return service.getOne(id);}
 	
 	@ApiOperation("Gets list of bills")
-	@ApiResponses(@ApiResponse(code = 200, message = "", responseContainer = "List", response = BillDTO.class))
+//	@ApiResponse(code = 200, message = "", responseContainer = "List", response = BillDTO.class)
+	@ApiResponse(code = 200, message = "", responseContainer = "Set", response = BillDTO.class)
 	@GetMapping("/{owner}/list")
-	public List<BillDTO> getList(@PathVariable int owner) {return service.getList(owner);}
+//	public List<BillDTO> getList(@PathVariable int owner) {return service.getList(owner);}
+	public Set<BillDTO> getList(@PathVariable int owner) {return service.getList(owner);}
 	
 	@ApiOperation("Changes bill's status")
 	@ApiResponses(value = {

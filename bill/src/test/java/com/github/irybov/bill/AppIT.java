@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
 import javax.sql.DataSource;
@@ -45,7 +47,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.BillDTO;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@Transactional
+//@Transactional
 @TestInstance(Lifecycle.PER_CLASS)
 //@Import(TestSupportBinderConfiguration.class)
 public class AppIT {
@@ -139,16 +141,16 @@ public class AppIT {
 	    assertThat(bill.hasBody(), is(false));
 	    
 	    // get list
-		ResponseEntity<List<BillDTO>> list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
-				null, new ParameterizedTypeReference<List<BillDTO>>(){});
-		assertThat(list.getStatusCode(), is(HttpStatus.OK));
-		assertThat(list.getBody().size(), is(2));
+		ResponseEntity<Set<BillDTO>> response = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
+				null, new ParameterizedTypeReference<Set<BillDTO>>(){});
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getBody().size(), is(2));
 		
 		// empty list
-		list = restTemplate.exchange("/bills/5/list", HttpMethod.GET, 
-				null, new ParameterizedTypeReference<List<BillDTO>>(){});
-		assertThat(list.getStatusCode(), is(HttpStatus.OK));
-		assertThat(list.getBody().isEmpty(), is(true));
+		response = restTemplate.exchange("/bills/5/list", HttpMethod.GET, 
+				null, new ParameterizedTypeReference<Set<BillDTO>>(){});
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getBody().isEmpty(), is(true));
 		
 		// change status
         url = "http://"+uri+":"+port+"/bills/2/status";
@@ -157,6 +159,14 @@ public class AppIT {
         		HttpMethod.PATCH, null, Boolean.class);
         assertThat(status.getStatusCode(), is(HttpStatus.OK));
         assertThat(status.getBody(), is(false));
+        
+		bill = restTemplate.getForEntity("/bills/2", BillDTO.class);
+		assertThat(bill.getStatusCode(), is(HttpStatus.OK));
+	    assertThat(bill.getBody().getId(), is(2));
+	    assertThat(bill.getBody().getBalance().doubleValue(), is(0.00));
+	    assertThat(bill.getBody().getCurrency(), is("SEA"));
+//	    assertThat(bill.getBody().getOwner(), is(1));
+	    assertThat(bill.getBody().isActive(), is(false));
         
         // failed change
         url = "http://"+uri+":"+port+"/bills/5/status";
@@ -172,9 +182,19 @@ public class AppIT {
         data.put(1, -3.00);
         data.put(2, 44.00);
         HttpEntity<Map<Integer, Double>> request = new HttpEntity<>(data);
-		ResponseEntity<Void> response = 
+		ResponseEntity<Void> update = 
 				restTemplate.exchange(url, HttpMethod.PATCH, request, Void.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.NO_CONTENT));
+        assertThat(update.getStatusCode(), is(HttpStatus.NO_CONTENT));
+        
+		response = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
+				null, new ParameterizedTypeReference<Set<BillDTO>>(){});
+		Set<BillDTO> set = response.getBody();
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(set.size(), is(2));
+		List<BillDTO> list = new ArrayList<>(set);
+		assertThat(list.get(0).getBalance().doubleValue(), is(7.00));
+		assertThat(list.get(1).getBalance().doubleValue(), is(44.00));
+		assertThat(list.get(1).isActive(), is(false));
         
         // inspect message
         Queue<Message<?>> queue = collector.forChannel(source.output());
@@ -189,11 +209,11 @@ public class AppIT {
         assertThat(delete.getStatusCode(), is(HttpStatus.NO_CONTENT));
         
         // check
-		list = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
-				null, new ParameterizedTypeReference<List<BillDTO>>(){});
-		assertThat(list.getStatusCode(), is(HttpStatus.OK));
-		assertThat(list.getBody().size(), is(1));
-		assertThat(list.getBody().get(0).getBalance().doubleValue(), is(7.00));
+		response = restTemplate.exchange("/bills/1/list", HttpMethod.GET, 
+				null, new ParameterizedTypeReference<Set<BillDTO>>(){});
+		assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response.getBody().size(), is(1));
+		assertThat(response.getBody().iterator().next().getBalance().doubleValue(), is(7.00));
 	}
 	
 	@AfterAll void clear() {populator = null;}

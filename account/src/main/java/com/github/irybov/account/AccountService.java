@@ -19,6 +19,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.env.Environment;
 import org.springframework.data.util.Streamable;
@@ -27,6 +31,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -55,6 +60,12 @@ public class AccountService {
 	private final AccountMapper mapStruct;
 	private final AccountJDBC jdbc;
 	
+	@Lazy
+	@Autowired
+	private AccountService self;
+	
+	private static final String ACCOUNTS = "accounts";
+	
 	@Transactional
 	public void create(Registration registration) {
 		
@@ -65,14 +76,14 @@ public class AccountService {
 //				.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()));
 //			account.setActive(true);
 //			account.setRoles(Collections.singleton(Role.CLIENT.getName()));
-			jdbc.save(account);
+			self.update(account);
 //		}
 	};
 	
 	public String generateToken(String header) {
 		
 		String[] login = header.split(":");
-		Account account = getAccount(login[0]);
+		Account account = self.getAccount(login[0]);
 		if(account.getPassword().equals(login[1])) {
 			SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
 					SignatureAlgorithm.HS256.getJcaName());
@@ -97,14 +108,16 @@ public class AccountService {
 	
 	public AccountDTO getOne(String phone) {
 		
-		Account account = getAccount(phone);
-		List<BillDTO> bills = billClient.getList(account.getId());
+		Account account = self.getAccount(phone);
+//		List<BillDTO> bills = billClient.getList(account.getId());
+		Set<BillDTO> bills = billClient.getList(account.getId());
 //		ResponseEntity<List<BillDTO>> response = 
 //				restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		
 		AccountDTO dto = mapStruct.toDTO(account);
-		dto.setBills(new HashSet<>(bills));
+//		dto.setBills(new HashSet<>(bills));
+		dto.setBills(bills);
 		return dto;
 	}
 	
@@ -114,14 +127,14 @@ public class AccountService {
 	
 	public void changePassword(String phone, String password) {
 		
-		Account account = getAccount(phone);
+		Account account = self.getAccount(phone);
 		account.setPassword(password);
-		jdbc.save(account);
+		self.update(account);
 	}
 	
 	public BillDTO addBill(String phone, String currency) {
 		
-		Account account = getAccount(phone);
+		Account account = self.getAccount(phone);
 		BillDTO bill = billClient.create(currency, account.getId());
 //        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
 //    	        .queryParam("currency", currency)
@@ -130,23 +143,32 @@ public class AccountService {
         
         if(account.getBills() != null) {account.getBills().add(bill.getId());}
         else {account.setBills(Stream.of(bill.getId()).collect(Collectors.toSet()));}
-        jdbc.save(account);
+        self.update(account);
         return bill;
 	}
 	
 	public void deleteBill(String phone, int id) {
 		
-		Account account = getAccount(phone);
+		Account account = self.getAccount(phone);
 		billClient.delete(id);
 		account.getBills().remove(id);
-		jdbc.save(account);
+		self.update(account);
 	}
 	
-	Account getAccount(String phone) {
+	@Cacheable(cacheNames = ACCOUNTS, key = "#phone", sync = true)
+	public Account getAccount(String phone) {
+		
 		Account account = jdbc.findByPhone(phone);
 		if(account != null) return account;
 		throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
 				String.format("Account with phone %s not found ", phone));
+	}
+	
+	@Transactional(propagation = Propagation.MANDATORY)
+	@CachePut(cacheNames = ACCOUNTS, key = "#result.phone", unless = "#result == null")
+	public Account update(Account account) {
+		jdbc.save(account);
+		return account;
 	}
 /*	
 	boolean checkFraud(String phone, String header) {

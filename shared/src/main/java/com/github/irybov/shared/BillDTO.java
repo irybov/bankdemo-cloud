@@ -1,5 +1,6 @@
 package com.github.irybov.shared;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
@@ -13,7 +14,9 @@ import lombok.EqualsAndHashCode.CacheStrategy;
 @Getter
 @Setter
 @EqualsAndHashCode(of = "id", cacheStrategy = CacheStrategy.NEVER)
-public class BillDTO {
+public class BillDTO implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
 	
 	private Integer id;
 	private Timestamp createdAt;

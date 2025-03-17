@@ -2,6 +2,7 @@ package com.github.irybov.operation;
 
 import java.sql.Timestamp;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
@@ -45,6 +46,7 @@ public class Operation {
 	@Id
 	@Column("id")
 	private Long id;
+	@CreatedDate
 	@Column("created_at")
 	private Timestamp createdAt;
 	@Column("amount")

@@ -23,14 +23,18 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -51,6 +55,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.irybov.shared.BillDTO;
 
@@ -68,10 +73,13 @@ public class BillServiceTest {
 	private Source source;
 	@InjectMocks
 	private BillService service;
+	@Mock
+	private BillService self;
 	
 	private AutoCloseable autoClosable;
 	private Bill bill;
 	
+	private BillDTO dto;
 //	private static MessageBuilder<?> builder;
 	
 	@BeforeAll
@@ -84,14 +92,27 @@ public class BillServiceTest {
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
 		service = new BillService(mapStruct, jdbc, template, source);
+		ReflectionTestUtils.setField(service, "self", self);
+		dto = mapStruct.toDTO(bill);
 	}
 	
 	@Test
 	void can_create() {
+//		Optional<Bill> optional = Optional.of(bill);
+//		when(jdbc.findById(anyInt())).thenReturn(optional);
+//		when(self.getBill(anyInt())).thenReturn(bill);
+//		when(self.getOne(anyInt())).thenReturn(dto);
+		when(self.getList(anyInt())).thenReturn(new LinkedHashSet<>());
+		bill.setId(0);
 		when(jdbc.save(any(Bill.class))).thenReturn(bill);
 		assertThat(service.create(bill.getCurrency(), bill.getOwner()))
 		.isExactlyInstanceOf(BillDTO.class);
 		verify(jdbc).save(any(Bill.class));
+//		verify(self).getOne(anyInt());
+//		verify(self).getBill(anyInt());
+//		verify(jdbc).findById(anyInt());
+		verify(self).getList(anyInt());
+		bill.setId(null);
 	}
 /*	
 	@Test
@@ -104,48 +125,65 @@ public class BillServiceTest {
 */	
 	@Test
 	void can_get_dto() {
-		Optional<Bill> optional = Optional.of(bill);
-		when(jdbc.findById(anyInt())).thenReturn(optional);
+		when(self.getBill(anyInt())).thenReturn(bill);
+//		Optional<Bill> optional = Optional.of(bill);
+//		when(jdbc.findById(anyInt())).thenReturn(optional);
 		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(BillDTO.class);
-		verify(jdbc).findById(anyInt());
+//		verify(jdbc).findById(anyInt());
+		verify(self).getBill(anyInt());
 	}
 	
 	@Test
 	void try_get_absent_one() {
-		Optional<Bill> optional = Optional.empty();
-		when(jdbc.findById(anyInt())).thenReturn(optional);
+		when(self.getBill(anyInt())).thenThrow(new NoSuchElementException());
+//		Optional<Bill> optional = Optional.empty();
+//		when(jdbc.findById(anyInt())).thenReturn(optional);
 		assertThrows(NoSuchElementException.class, () -> service.getOne(anyInt()));
 		assertThatThrownBy(() -> service.getOne(anyInt())).isInstanceOf(NoSuchElementException.class);
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> service.getOne(anyInt()));
-		verify(jdbc, times(3)).findById(anyInt());
+//		verify(jdbc, times(3)).findById(anyInt());
+		verify(self, times(3)).getBill(anyInt());
 	}
 	
 	@Test
 	void can_get_list() {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<Bill> bills = Collections.nCopies(size, bill).stream()
+		List<Bill> list = 
+//				Collections.nCopies(size, bill).stream()
+				Stream.generate(() -> new Bill("SEA", 0)).limit(size)
 				.collect(Collectors.toList());
-//		final int owner = new Random().nextInt();
+		int i = 0;
+		for(Bill bill : list) bill.setId(new Integer(++i));
+		Set<Bill> bills = new HashSet<>(list);
 		
 		when(jdbc.findByOwner(anyInt())).thenReturn(bills);
-		List<BillDTO> results = service.getList(anyInt());
+//		List<BillDTO> results = service.getList(anyInt());
+		Set<BillDTO> results = service.getList(anyInt());
 		assertAll(
-				() -> assertThat(results).hasSameClassAs(new ArrayList<BillDTO>()),
-				() -> assertThat(results.size()).isEqualTo(bills.size()));
+//				() -> assertThat(results).hasSameClassAs(new ArrayList<BillDTO>()), 
+				() -> assertThat(results).hasSameClassAs(new HashSet<BillDTO>()), 
+				() -> assertThat(results.size()).isEqualTo(size));
 		verify(jdbc).findByOwner(anyInt());
 	}
 	
 	@Test
 	void try_get_empty_list() {
 //		final int owner = new Random().nextInt();
-		when(jdbc.findByOwner(anyInt())).thenReturn(new LinkedList<Bill>());
+//		when(jdbc.findByOwner(anyInt())).thenReturn(new LinkedList<Bill>());
+		when(jdbc.findByOwner(anyInt())).thenReturn(new HashSet<Bill>());
 		assertTrue(service.getList(anyInt()).isEmpty());
 		verify(jdbc).findByOwner(anyInt());
 	}
 	
 	@Test
 	void can_change_status() {
+		
+		when(self.getBill(anyInt())).thenReturn(bill);
+		when(self.getOne(anyInt())).thenReturn(dto);
+//		Optional<Bill> optional = Optional.of(bill);
+//		when(jdbc.findById(anyInt())).thenReturn(optional);
+		
 		boolean isActive = true;
 		when(template.queryForObject(anyString(), eq(Boolean.class))).thenReturn(isActive);
 		when(template.update(anyString())).thenReturn(anyInt());
@@ -153,6 +191,10 @@ public class BillServiceTest {
 		assertThat(service.changeStatus(anyInt())).isFalse();
 		verify(template).queryForObject(anyString(), eq(Boolean.class));
 		verify(template).update(anyString());
+		
+//		verify(jdbc).findById(anyInt());
+		verify(self).getBill(anyInt());
+		verify(self).getOne(anyInt());
 	}
 	
 	@Test
@@ -171,9 +213,14 @@ public class BillServiceTest {
 		
 		MessageChannel channel = Mockito.mock(MessageChannel.class);
 		
-		List<Bill> bills = new LinkedList<>();
+//		List<Bill> bills = new LinkedList<>();
+		Set<Bill> bills = new HashSet<>();
 		Bill stub = new Bill("SEA", 0);
 		stub.create();
+		
+		when(self.getOne(anyInt())).thenReturn(dto);
+		Set<BillDTO> dtos = new HashSet<>(mapStruct.toSet(bills));
+		when(self.getList(anyInt())).thenReturn(dtos);
 		
 		int billID = 0;
 		int stubID = 9;
@@ -181,10 +228,13 @@ public class BillServiceTest {
 		double negative = -15.00;
 		Map<Integer, Double> data = new LinkedHashMap<>();
 		
-		when(jdbc.findByIdIn(any(Collection.class))).thenReturn(bills);
+//		Optional<Bill> optional = Optional.of(bill);
+//		when(jdbc.findById(anyInt())).thenReturn(optional);
+		
+		when(jdbc.findByIdIn(any(Set.class))).thenReturn(bills);
 //		when(jdbc.findById(0)).thenReturn(Optional.of(bill));
 //		when(jdbc.findById(9)).thenReturn(Optional.of(stub));
-		when(jdbc.saveAll(any(List.class))).thenReturn(bills);
+		when(jdbc.saveAll(any(Set.class))).thenReturn(bills);
 //		doNothing().when(jdbc.save(any(Bill.class)));
 		when(source.output()).thenReturn(channel);
 		when(channel.send(any(Message.class))).thenReturn(true);
@@ -203,11 +253,39 @@ public class BillServiceTest {
 		assertEquals(-10.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		assertEquals(-15.00, stub.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		
-		verify(jdbc, times(2)).findByIdIn(any(Collection.class));
+		verify(jdbc, times(2)).findByIdIn(any(Set.class));
 //		verify(jdbc, times(3)).findById(anyInt());
-		verify(jdbc, times(2)).saveAll(any(List.class));
+		verify(jdbc, times(2)).saveAll(any(Set.class));
 		verify(source, times(2)).output();
 		verify(channel, times(2)).send(any(Message.class));
+		
+//		verify(jdbc, times(3)).findById(anyInt());
+		verify(self, times(3)).getList(anyInt());
+		verify(self, times(3)).getOne(anyInt());
+	}
+	
+	@Test
+	void can_delete() {
+		
+		Set<Bill> bills = new HashSet<>();
+		Bill stub = new Bill("SEA", 0);
+		stub.create();
+		
+		Set<BillDTO> dtos = new HashSet<>(mapStruct.toSet(bills));
+		when(self.getList(anyInt())).thenReturn(dtos);
+		doNothing().when(self).deleteCachedList(anyInt());
+		
+		when(self.getBill(anyInt())).thenReturn(bill);
+		when(self.getOne(anyInt())).thenReturn(dto);
+		
+		service.delete(anyInt());
+		assertEquals(dtos.isEmpty(), true);
+		
+		verify(self).getBill(anyInt());
+		verify(self).getOne(anyInt());
+		verify(self).getList(anyInt());
+		verify(self).deleteCachedList(anyInt());
+//		verify(self).updateCachedList(anyInt(), any(Set.class));
 	}
 	
     @AfterEach

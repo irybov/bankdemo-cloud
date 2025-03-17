@@ -1,6 +1,7 @@
 package com.github.irybov.bill;
 
 import java.util.List;
+import java.util.Set;
 
 import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
@@ -15,5 +16,5 @@ public interface BillMapper {
 	
 	BillDTO toDTO(Bill entity);
 	List<BillDTO> toList(List<Bill> entities);
-
+	Set<BillDTO> toSet(Set<Bill> entities);
 }

@@ -1,11 +1,14 @@
 package com.github.irybov.bill;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -21,14 +24,16 @@ import lombok.EqualsAndHashCode.CacheStrategy;
 //@NoArgsConstructor
 @Table(schema="bankdemo", name="bills")
 @EqualsAndHashCode(of = "id", cacheStrategy = CacheStrategy.NEVER)
-public class Bill {
+public class Bill implements Serializable {
 
 //	@EqualsAndHashCode.Exclude
 	@Id
 	@Column("id")
 	private Integer id;
+	@CreatedDate
 	@Column("created_at")
 	private Timestamp createdAt;
+	@LastModifiedDate
 	@Column("updated_at")
 	private Timestamp updatedAt;
 	@Column("is_active")

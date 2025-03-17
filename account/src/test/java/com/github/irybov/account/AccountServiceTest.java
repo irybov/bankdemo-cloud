@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,6 +26,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Validator;
@@ -44,6 +46,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -67,6 +70,8 @@ public class AccountServiceTest {
 	private AccountJDBC jdbc;
 	@InjectMocks
 	private AccountService service;
+	@Mock
+	private AccountService self;
 	
 	private Account account;
 	
@@ -75,6 +80,7 @@ public class AccountServiceTest {
 		
 		MockitoAnnotations.openMocks(this);
 		service = new AccountService(env, billClient, mapStruct, jdbc);
+		ReflectionTestUtils.setField(service, "self", self);
 		
 		account = new Account();
 		account.setId(0);
@@ -100,12 +106,22 @@ public class AccountServiceTest {
 		registration.setBirthday(LocalDate.of(2001, 01, 01));
 		registration.setPassword("superadmin");
 		
-		when(jdbc.save(account)).thenReturn(account);
+		when(self.update(any(Account.class))).thenReturn(account);
+//		when(jdbc.save(account)).thenReturn(account);
 		
 		service.create(registration);
 		assertThat(mapStruct.toDB(registration)).isExactlyInstanceOf(Account.class);
 		
-		verify(jdbc).save(account);
+//		verify(jdbc).save(account);
+		verify(self).update(any(Account.class));
+	}
+	
+	@Test
+	void can_update() {
+		
+		when(jdbc.save(any(Account.class))).thenReturn(account);
+		assertThat(service.update(account)).isExactlyInstanceOf(Account.class);;
+		verify(jdbc).save(any(Account.class));
 	}
 	
 	@Test
@@ -113,12 +129,14 @@ public class AccountServiceTest {
 		
 		when(env.getProperty("token.secret")).thenReturn("rAUOQK5LF3s0unfY8jbOkJc8Ep9H9v3Y");
 		when(env.getProperty("token.lifetime")).thenReturn("300");
-		when(jdbc.findByPhone(anyString())).thenReturn(account);
+//		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		when(self.getAccount(anyString())).thenReturn(account);
 		
 		assertThat(service.generateToken("0000000000:superadmin"))
 			.isExactlyInstanceOf(String.class);
 		
-		verify(jdbc).findByPhone(anyString());
+//		verify(jdbc).findByPhone(anyString());
+		verify(self).getAccount(anyString());
 		verify(env).getProperty("token.secret");
 		verify(env).getProperty("token.lifetime");
 	}
@@ -128,13 +146,15 @@ public class AccountServiceTest {
 		
 		String header = "0000000000:superclown";
 		
-		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		when(self.getAccount(anyString())).thenReturn(account);
+//		when(jdbc.findByPhone(anyString())).thenReturn(account);
 		
 		assertThrows(ResponseStatusException.class, () -> service.generateToken(header));
 		assertThatThrownBy(() -> service.generateToken(header)).isInstanceOf(ResponseStatusException.class);
 		assertThatExceptionOfType(ResponseStatusException.class).isThrownBy(() -> service.generateToken(header));
 		
-		verify(jdbc, times(3)).findByPhone(anyString());
+//		verify(jdbc, times(3)).findByPhone(anyString());
+		verify(self, times(3)).getAccount(anyString());
 	}
 
 	@Test
@@ -146,20 +166,29 @@ public class AccountServiceTest {
 		assertThat(service.getOne(anyInt())).isExactlyInstanceOf(AccountDTO.class);
 		verify(jdbc).findById(anyInt());
 */		
-		BillDTO bill = new BillDTO();
+//		BillDTO bill = new BillDTO();
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<BillDTO> bills = Collections.nCopies(size, bill).stream()
+		List<BillDTO> list = 
+//				Collections.nCopies(size, bill).stream()
+				Stream.generate(() -> new BillDTO()).limit(size)
 				.collect(Collectors.toList());
-		
-		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		int i = 0;
+		for(BillDTO bill : list) bill.setId(new Integer(++i));
+		Set<BillDTO> bills = new HashSet<>(list);
+
+		when(self.getAccount(anyString())).thenReturn(account);
+//		when(jdbc.findByPhone(anyString())).thenReturn(account);
 //		when(restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){}))
 //			.thenReturn(new ResponseEntity<List<BillDTO>>(bills, HttpStatus.OK));
 		when(billClient.getList(anyInt())).thenReturn(bills);
 		
-		assertThat(service.getOne(anyString())).isExactlyInstanceOf(AccountDTO.class);
-		
-		verify(jdbc).findByPhone(anyString());
+		AccountDTO account = service.getOne(anyString());
+		assertThat(account).isExactlyInstanceOf(AccountDTO.class);
+		assertThat(account.getBills().size()).isEqualTo(size);
+
+		verify(self).getAccount(anyString());
+//		verify(jdbc).findByPhone(anyString());
 //		verify(restTemplate).exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		verify(billClient).getList(anyInt());
@@ -196,15 +225,19 @@ public class AccountServiceTest {
 	
 	@Test
 	void can_change_password() {
-		
-		when(jdbc.findByPhone(anyString())).thenReturn(account);
-		when(jdbc.save(account)).thenReturn(account);
+
+		when(self.getAccount(anyString())).thenReturn(account);
+//		when(jdbc.findByPhone(anyString())).thenReturn(account);
+//		when(jdbc.save(account)).thenReturn(account);
+		when(self.update(any(Account.class))).thenReturn(account);
 		
 		service.changePassword(anyString(), "terminator");
 		assertThat(account.getPassword()).isEqualTo("terminator");
 		
-		verify(jdbc).findByPhone(anyString());
-		verify(jdbc).save(account);
+		verify(self).getAccount(anyString());
+//		verify(jdbc).findByPhone(anyString());
+//		verify(jdbc).save(account);
+		verify(self).update(any(Account.class));
 	}
 	
 	@Test
@@ -214,18 +247,22 @@ public class AccountServiceTest {
 //        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
 //    	        .queryParam("currency", "SEA")
 //    	        .queryParam("owner", account.getId());
-		
-		when(jdbc.findByPhone(anyString())).thenReturn(account);
-		when(jdbc.save(any(Account.class))).thenReturn(account);
+
+		when(self.getAccount(anyString())).thenReturn(account);
+//		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		when(self.update(any(Account.class))).thenReturn(account);
+//		when(jdbc.save(any(Account.class))).thenReturn(account);
 //		when(restTemplate.postForObject(uriBuilder.toUriString(), null, BillDTO.class))
 //			.thenReturn(bill);
 		when(billClient.create(anyString(), anyInt())).thenReturn(bill);
 		
 		assertThat(service.addBill(anyString(), "SEA")).isExactlyInstanceOf(BillDTO.class);
-		verify(jdbc).findByPhone(anyString());
-		verify(jdbc).save(any(Account.class));
+//		verify(jdbc).findByPhone(anyString());
+		verify(self).update(any(Account.class));
+//		verify(jdbc).save(any(Account.class));
 //		verify(restTemplate).postForObject(uriBuilder.toUriString(), null, BillDTO.class);
 		verify(billClient).create(anyString(), anyInt());
+		verify(self).getAccount(anyString());
 	}
 	
 	@Test
@@ -233,13 +270,19 @@ public class AccountServiceTest {
 		
 		Set<Integer> bills = IntStream.range(1,5).collect(HashSet::new, Set::add, Set::addAll);
 		account.setBills(bills);
-		
-		when(jdbc.findByPhone(anyString())).thenReturn(account);
+
+		when(self.getAccount(anyString())).thenReturn(account);
+//		when(jdbc.findByPhone(anyString())).thenReturn(account);
+		when(self.update(any(Account.class))).thenReturn(account);
+		doNothing().when(billClient).delete(anyInt());
 		
 		service.deleteBill(anyString(), 1);
 		assertThat(account.getBills().size()).isEqualTo(3);
-		
-		verify(jdbc).findByPhone(anyString());
+
+		verify(self).getAccount(anyString());
+//		verify(jdbc).findByPhone(anyString());
+		verify(self).update(any(Account.class));
+		verify(billClient).delete(anyInt());
 	}
 	
 	@AfterEach
