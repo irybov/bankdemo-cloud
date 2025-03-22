@@ -23,6 +23,8 @@ import lombok.NoArgsConstructor;
 @Table(schema="bankdemo", name="accounts")
 public class Account implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
+	
 	@Id
 	@Column("id")
 	private Integer id;

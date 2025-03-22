@@ -239,6 +239,8 @@ class AppIT {
                 HttpMethod.GET, null, new ParameterizedTypeReference<Page<Operation>>(){});
         assertThat(response.getStatusCode(), is(HttpStatus.OK));
         assertThat(response.getBody().getContent().size(), is(1));
+        assertThat(response.getBody().getPageable().isPaged(), is(true));
+        assertThat(response.getBody().getSort().isSorted(), is(true));
 	}
 
 	@AfterAll void clear() {

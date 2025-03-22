@@ -249,10 +249,13 @@ public class AppIT {
 	void can_get_one() throws JsonProcessingException, URISyntaxException {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<BillDTO> bills = Stream.generate(() -> new BillDTO()).limit(size)
+		List<BillDTO> bills = Stream.generate(() -> new BillDTO())
+				.peek(e -> e.setCurrency("SEA"))
+				.limit(size)
 				.collect(Collectors.toList());
 		int i = 1;
 		for(BillDTO bill : bills) {bill.setId(new Integer(i++));}
+		Set<BillDTO> list = new HashSet<>(bills);
 /*		
 	    mockServer.expect(ExpectedCount.once(), requestTo(new URI("http://BILL/bills/2/list")))
 	    .andExpect(method(HttpMethod.GET))
@@ -264,7 +267,7 @@ public class AppIT {
 	    wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.OK.value())
-				.withBody(mapper.writeValueAsString(bills))
+				.withBody(mapper.writeValueAsString(list))
 				.withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)));
 /*	    
 		HttpHeaders headers = new HttpHeaders();
@@ -356,7 +359,9 @@ public class AppIT {
 	void can_get_cached_bills() {
 		
 		final int size = new Random().nextInt(Byte.MAX_VALUE + 1);
-		List<BillDTO> bills = Stream.generate(() -> new BillDTO()).limit(size)
+		List<BillDTO> bills = Stream.generate(() -> new BillDTO())
+				.peek(e -> e.setCurrency("SEA"))
+				.limit(size)
 				.collect(Collectors.toList());
 		int i = 1;
 		for(BillDTO bill : bills) {bill.setId(new Integer(i++));}

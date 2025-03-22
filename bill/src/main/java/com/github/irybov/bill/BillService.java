@@ -153,7 +153,7 @@ public class BillService {
 		jdbc.deleteById(id);
 	}
 
-	@Transactional(propagation = Propagation.SUPPORTS)
+	@Transactional(propagation = Propagation.MANDATORY)
 	@CachePut(cacheNames = DTOS, key = "#result.id", unless = "#result == null")
 	public BillDTO updateCachedDTO(BillDTO dto) {return dto;}
 /*
@@ -161,11 +161,11 @@ public class BillService {
 	@Cacheable(cacheNames = LISTS, key = "#owner", unless = "#result.isEmpty()")
 	public Set<BillDTO> getCachedList(int owner) {return new LinkedHashSet<>();}
 */
-	@Transactional(propagation = Propagation.SUPPORTS)
+	@Transactional(propagation = Propagation.MANDATORY)
 	@CachePut(cacheNames = SETS, key = "#owner")
 	public Set<BillDTO> updateCachedList(int owner, Set<BillDTO> list) {return list;}
 
-	@Transactional(propagation = Propagation.SUPPORTS)
+	@Transactional(propagation = Propagation.MANDATORY)
 	@CacheEvict(cacheNames = SETS, key = "#owner", beforeInvocation = true)
 	public void deleteCachedList(int owner) {}
 	
@@ -173,7 +173,7 @@ public class BillService {
 	@Cacheable(cacheNames = BILLS, key = "#id", sync = true)
 	public Bill getBill(int id) {return jdbc.findById(id).get();}
 	
-	@Transactional(propagation = Propagation.SUPPORTS)
+	@Transactional(propagation = Propagation.MANDATORY)
 	@CachePut(cacheNames = BILLS, key = "#result.id")
 	public Bill updateCachedBill(Bill bill) {return bill;}
 	
