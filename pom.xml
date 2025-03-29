@@ -13,6 +13,7 @@
 		<module>account</module>
 		<module>admin</module>
 		<module>bill</module>
+		<module>cache</module>
 		<module>config</module>
 		<module>gateway</module>
 		<module>notificator</module>
