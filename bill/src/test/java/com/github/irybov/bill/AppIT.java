@@ -198,7 +198,7 @@ public class AppIT {
         
         // inspect message
         Queue<Message<?>> queue = collector.forChannel(source.output());
-        Message<String> message = (Message<String>) queue.poll();
+        Message<?> message = queue.poll();
         assertThat(message.getPayload()).isEqualTo(mapper.writeValueAsString(data));
         
         // delete
