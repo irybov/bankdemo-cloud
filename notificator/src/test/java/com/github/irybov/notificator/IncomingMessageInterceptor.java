@@ -4,7 +4,9 @@ import org.springframework.integration.config.GlobalChannelInterceptor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.stereotype.Component;
 
+//@Component
 //@GlobalChannelInterceptor(patterns = "input")
 public class IncomingMessageInterceptor  implements ChannelInterceptor {
     

@@ -37,9 +37,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @TestInstance(Lifecycle.PER_CLASS)
 @EnableAutoConfiguration(exclude = {TestSupportBinderAutoConfiguration.class, MessageCollectorAutoConfiguration.class})
 public class AppIT {
-	
-    @Autowired
-    private ObjectMapper mapper;
 
     @Autowired
     private Sink sink;
@@ -54,7 +51,11 @@ public class AppIT {
     private String GROUP;
     private String INPUT_QUEUE;
     private String DLQ;
+    @Value("${spring.cloud.stream.rabbit.bindings.input.consumer.binding-routing-key}")
+    private String KEY;
     
+    @Autowired
+    private ObjectMapper mapper;
     private Map<Integer, Double> data;
     private String json;
     
@@ -99,7 +100,7 @@ public class AppIT {
 	};
 	input.addInterceptor(assertionInterceptor);
 
-	this.template.convertAndSend(EXCHANGE, "KEY", json);
+	this.template.convertAndSend(EXCHANGE, KEY, json);
 	Awaitility.await().untilAsserted(() -> {
         	Message<?> message = atomicMessage.get();
         	assertThat(message).isNotNull();
@@ -110,9 +111,9 @@ public class AppIT {
     @Test
     void dead_letters_queue() throws JsonProcessingException {
 
-//	this.admin.declareBinding(new Binding(DLQ, DestinationType.QUEUE, "DLX", "#", null));
+//	this.admin.declareBinding(new Binding(DLQ, DestinationType.QUEUE, "DLX", KEY, null));
         this.template.setReceiveTimeout(-1);	
-        this.template.convertAndSend(EXCHANGE, "KEY", "OMG");
+        this.template.convertAndSend(EXCHANGE, KEY, "OMG");
 
         final AtomicReference<org.springframework.amqp.core.Message> atomicMessage = new AtomicReference<>();
 	atomicMessage.set(template.receive(DLQ));

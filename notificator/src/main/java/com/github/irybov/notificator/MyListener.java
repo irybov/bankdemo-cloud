@@ -16,8 +16,5 @@ public class MyListener {
 	    if(data.length() > 3) System.out.println(data);
 	    else throw new RuntimeException("OMG");
 	}
-	
-//@RabbitListener(queues = "notifications.test.dlq")
-//public void dlq_consumer(org.springframework.amqp.core.Message received) {System.out.println(received.toString());}
 
 }
