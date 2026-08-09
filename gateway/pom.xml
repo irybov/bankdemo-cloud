@@ -7,7 +7,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   <parent>
     <groupId>com.github.irybov</groupId>
     <artifactId>bankdemo-cloud</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.2.1-SNAPSHOT</version>
   </parent>
   
   <artifactId>gateway</artifactId>
@@ -36,14 +36,20 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 			</exclusion>
 		</exclusions>
 	</dependency>
-	<dependency>
-	    <groupId>com.github.tomakehurst</groupId>
-	    <artifactId>wiremock-jre8</artifactId>
-	    <scope>test</scope>
-	</dependency>
-  	<dependency>
+  <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webtestclient</artifactId>
+      <scope>compile</scope>
+  </dependency>
+  <dependency>
+      <groupId>org.wiremock.integrations</groupId>
+      <artifactId>wiremock-spring-boot</artifactId>
+      <version>4.2.1</version>
+      <scope>test</scope>
+  </dependency>
+  <dependency>
       <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-gateway</artifactId>
+      <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
 	</dependency>
 	<dependency>
       <groupId>org.springframework.cloud</groupId>
@@ -57,14 +63,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 	    <groupId>org.springframework.cloud</groupId>	
 	    <artifactId>spring-cloud-starter-bootstrap</artifactId>	
 	</dependency>
-	<dependency>
+<!-- 	<dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-starter-sleuth</artifactId>
     </dependency>
     <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-sleuth-zipkin</artifactId>
-    </dependency>
+    </dependency> -->
   </dependencies>
   
 </project>

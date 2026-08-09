@@ -212,8 +212,7 @@ class OperationServiceTest {
 				OffsetDateTime.of(LocalDate.parse("1900-01-01"), LocalTime.MIN, ZoneOffset.UTC), 
 				OffsetDateTime.now(), pageable);
 		
-		assertThat(dtos)
-			.hasSameClassAs(new PageImpl<Operation>(new ArrayList<Operation>()));
+		assertThat(dtos).hasSameClassAs(new PageImpl<Operation>(new ArrayList<Operation>()));
 		assertThat(dtos.getContent().size()).isEqualTo(size);
 //		verify(jdbcTemplate).query(anyString(), any(BeanPropertyRowMapper.class));
 //		verify(jdbcTemplate).queryForObject(anyString(), eq(Long.class));

@@ -49,7 +49,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.cloud.stream.messaging.Source;
+import org.springframework.cloud.stream.function.StreamBridge;
+// import org.springframework.cloud.stream.messaging.Source;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.Message;
@@ -70,7 +71,8 @@ public class BillServiceTest {
 	@Mock
 	private JdbcTemplate template;
 	@Mock
-	private Source source;
+	// private Source source;
+	private StreamBridge streamBridge;
 	@InjectMocks
 	private BillService service;
 	@Mock
@@ -91,7 +93,7 @@ public class BillServiceTest {
 	@BeforeEach
 	void set_up() {
 		autoClosable = MockitoAnnotations.openMocks(this);
-		service = new BillService(mapStruct, jdbc, template, source);
+		service = new BillService(mapStruct, jdbc, template, streamBridge);
 		ReflectionTestUtils.setField(service, "self", self);
 		dto = mapStruct.toDTO(bill);
 	}
@@ -154,15 +156,15 @@ public class BillServiceTest {
 				Stream.generate(() -> new Bill("SEA", 0)).limit(size)
 				.collect(Collectors.toList());
 		int i = 0;
-		for(Bill bill : list) bill.setId(new Integer(++i));
-		Set<Bill> bills = new HashSet<>(list);
+		for(Bill bill : list) bill.setId(++i);
+		Set<Bill> bills = new LinkedHashSet<>(list);
 		
 		when(jdbc.findByOwner(anyInt())).thenReturn(bills);
 //		List<BillDTO> results = service.getList(anyInt());
 		Set<BillDTO> results = service.getList(anyInt());
 		assertAll(
 //				() -> assertThat(results).hasSameClassAs(new ArrayList<BillDTO>()), 
-				() -> assertThat(results).hasSameClassAs(new HashSet<BillDTO>()), 
+				() -> assertThat(results).hasSameClassAs(new LinkedHashSet<BillDTO>()), 
 				() -> assertThat(results.size()).isEqualTo(size));
 		verify(jdbc).findByOwner(anyInt());
 	}
@@ -211,7 +213,7 @@ public class BillServiceTest {
 	@Test
 	void can_update_balance() {
 		
-		MessageChannel channel = Mockito.mock(MessageChannel.class);
+		// MessageChannel channel = Mockito.mock(MessageChannel.class);
 		
 //		List<Bill> bills = new LinkedList<>();
 		Set<Bill> bills = new HashSet<>();
@@ -235,9 +237,9 @@ public class BillServiceTest {
 //		when(jdbc.findById(0)).thenReturn(Optional.of(bill));
 //		when(jdbc.findById(9)).thenReturn(Optional.of(stub));
 		when(jdbc.saveAll(any(Set.class))).thenReturn(bills);
-//		doNothing().when(jdbc.save(any(Bill.class)));
-		when(source.output()).thenReturn(channel);
-		when(channel.send(any(Message.class))).thenReturn(true);
+		when(streamBridge.send(anyString(), any(Message.class))).thenReturn(true);
+		// when(source.output()).thenReturn(channel);
+		// when(channel.send(any(Message.class))).thenReturn(true);
 
 		bill.setId(billID);
 		bills.add(bill);
@@ -256,8 +258,9 @@ public class BillServiceTest {
 		verify(jdbc, times(2)).findByIdIn(any(Set.class));
 //		verify(jdbc, times(3)).findById(anyInt());
 		verify(jdbc, times(2)).saveAll(any(Set.class));
-		verify(source, times(2)).output();
-		verify(channel, times(2)).send(any(Message.class));
+		verify(streamBridge, times(2)).send(anyString(), any(Message.class));
+		// verify(source, times(2)).output();
+		// verify(channel, times(2)).send(any(Message.class));
 		
 //		verify(jdbc, times(3)).findById(anyInt());
 		verify(self, times(3)).getList(anyInt());

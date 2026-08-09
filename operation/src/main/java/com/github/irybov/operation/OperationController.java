@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +19,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,42 +31,47 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 
-@Api(description = "Operation's microservice controller")
+@Tag(name = "Operation's microservice controller")
 @RestController
 @RequestMapping("/operations")
 @RequiredArgsConstructor
+@Validated
 public class OperationController {
 	
 	private final OperationService service;
 
-	@ApiOperation("Saves money operation")
-	@ApiResponses(@ApiResponse(code = 201, message = ""))
+	@Operation(description = "Save money operation")
+	@ApiResponses(@ApiResponse(responseCode  = "201"))
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public void save(@Valid @RequestBody OperationDTO dto) {service.save(dto);}
 	
-	@ApiOperation("Gets one operation")
+	@Operation(description = "Gets one operation")
 	@ApiResponses(value = {
-			@ApiResponse(code = 200, message = "", response = Operation.class), 
-			@ApiResponse(code = 404, message = "")})
+			@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = com.github.irybov.operation.Operation.class))), 
+			@ApiResponse(responseCode = "404")
+		})
 	@GetMapping("/{id}")
-	public Operation getOne(@PathVariable long id) {return service.getOne(id);}
+	public com.github.irybov.operation.Operation getOne(@PathVariable long id) {return service.getOne(id);}
 	
-	@ApiOperation("Gets list of operations")
-	@ApiResponses(@ApiResponse(code = 200, message = "", responseContainer = "List", response = Operation.class))
+	@Operation(description = "Gets list of operations")
+	@ApiResponses(@ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = com.github.irybov.operation.Operation.class)))))
 	@GetMapping("/{id}/list")
-	public List<Operation> getList(@PathVariable int id) {return service.getList(id);}
+	public List<com.github.irybov.operation.Operation> getList(@PathVariable int id) {return service.getList(id);}
 	
-	@ApiOperation("Gets page of operations")
+	@Operation(description = "Gets page of operations")
 	@PagebleAPI
 	@GetMapping("/{id}/page")
-	public Page<Operation> getPage(@PathVariable int id, 
+	public Page<com.github.irybov.operation.Operation> getPage(@PathVariable int id, 
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
 			Optional<LocalDate> mindate, 
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
@@ -90,7 +96,7 @@ public class OperationController {
 	protected void handleException(NoSuchElementException e){}
 	
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    protected ResponseEntity<List<String>> handleArgumentsException(MethodArgumentNotValidException e) {
+    protected ResponseEntity<List<String>> handleMethodArgumentsException(MethodArgumentNotValidException e) {
 	    List<String> errors = new ArrayList<String>();
 	    for(FieldError error : e.getBindingResult().getFieldErrors()) {
 	        errors.add(error.getDefaultMessage());

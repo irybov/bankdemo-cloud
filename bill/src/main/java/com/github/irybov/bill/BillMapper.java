@@ -5,11 +5,12 @@ import java.util.Set;
 
 import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import com.github.irybov.shared.BillDTO;
 
-@Mapper(componentModel = "spring", 
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, 
 	nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL, 
 	injectionStrategy = InjectionStrategy.FIELD)
 public interface BillMapper {

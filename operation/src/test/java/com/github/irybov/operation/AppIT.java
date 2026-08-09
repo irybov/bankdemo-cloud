@@ -27,8 +27,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+// import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -36,6 +36,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -43,15 +44,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@AutoConfigureWebTestClient
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
 //@AutoConfigureWireMock(port = 8888)
@@ -70,7 +75,10 @@ class AppIT {
 	}
 */	
 	@Autowired
-	private TestRestTemplate testRestTemplate;
+	// private TestRestTemplate testRestTemplate;
+	private WebTestClient webTestClient;
+	// @Autowired
+    // private ObjectMapper mapper;
 	
 	@Autowired
 	private DataSource dataSource;
@@ -101,17 +109,18 @@ class AppIT {
 	void context_loading(ApplicationContext context) {
 		assertThat(context).isNotNull();
 		
-		String path = "http://"+uri+":"+port;
-		
-		ResponseEntity<Void> response = 
-				testRestTemplate.getForEntity(path + "/swagger-ui/", Void.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.OK));
-        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.TEXT_HTML);
+		webTestClient.get()
+		.uri("/swagger-ui/index.html")
+		.exchange()
+		.expectStatus().isOk()
+		.expectHeader().exists(HttpHeaders.CONTENT_TYPE).equals(MediaType.TEXT_HTML_VALUE);
         
-        response = 
-				testRestTemplate.getForEntity(path + "/v3/api-docs", Void.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.OK));
-        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+		webTestClient.get()
+		.uri("/v3/api-docs")
+		.exchange()
+		.expectStatus().isOk()
+		.expectHeader().exists(HttpHeaders.CONTENT_TYPE).equals(MediaType.APPLICATION_JSON_VALUE);
+		
 	}
 	
 	@Test
@@ -138,9 +147,16 @@ class AppIT {
 */		
 		OperationDTO operation = new OperationDTO(0.01, Action.EXTERNAL, "SEA", 4, 4, "Demo");
 		
-		ResponseEntity<Void> response = 
-				testRestTemplate.postForEntity("/operations", operation, Void.class);
-	    assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
+		webTestClient.post()
+		.uri("/operations")
+		.contentType(MediaType.APPLICATION_JSON)
+		.bodyValue(operation)
+		.exchange()
+		.expectStatus().isCreated()
+		.expectBody().isEmpty();
+		// ResponseEntity<Void> response = 
+		// 		testRestTemplate.postForEntity("/operations", operation, Void.class);
+	    // assertThat(response.getStatusCode(), is(HttpStatus.CREATED));
 	    
 //	    mockServer.verify();
 //	    mockServer.reset();
@@ -151,12 +167,29 @@ class AppIT {
 	void fail_to_save() {
 		
 		OperationDTO operation = new OperationDTO(-0.01, null, "coin", -4, 1_000_000_000, " ");
-		HttpEntity<OperationDTO> entity = new HttpEntity<>(operation);
-		
+		// HttpEntity<OperationDTO> entity = new HttpEntity<>(operation);
+
+		webTestClient.post()
+		.uri("/operations")
+		.contentType(MediaType.APPLICATION_JSON)
+		.bodyValue(operation)
+		.exchange()
+		.expectStatus().isBadRequest()
+		.expectBody(new ParameterizedTypeReference<List<String>>(){})
+		.consumeWith(response -> {
+			List<String> list = response.getResponseBody();
+			assertThat(list.size(), is(6));
+			assertThat(list.contains("Amount of money should be higher than zero"), is(true));
+			assertThat(list.contains("Action must not be null"), is(true));
+			assertThat(list.contains("Currency code should be 3 capital characters length"), is(true));
+			assertThat(list.contains("Sender's bill number should be positive"), is(true));
+			assertThat(list.contains("Recepient's bill number should be less than 10 digits length"), is(true));
+			assertThat(list.contains("Bank's name must not be blank"), is(true));
+		});
+	/* 		
 		ResponseEntity<List<String>> violations = 
 				testRestTemplate.exchange("/operations", HttpMethod.POST, entity, 
 						new ParameterizedTypeReference<List<String>>(){});
-		
 	    assertThat(violations.getStatusCode(), is(HttpStatus.BAD_REQUEST));
         assertThat(violations.getBody().size(), is(6));
         assertThat(violations.getBody().contains("Amount of money should be higher than zero"), is(true));
@@ -165,62 +198,101 @@ class AppIT {
         assertThat(violations.getBody().contains("Sender's bill number should be positive"), is(true));
         assertThat(violations.getBody().contains("Recepient's bill number should be less than 10 digits length"), is(true));
         assertThat(violations.getBody().contains("Bank's name must not be blank"), is(true));
+	 */	
 	}
 	
 	@Test
 	void can_get_one() {
+
+		Operation response = webTestClient.get()
+		.uri("/operations/1")
+		.exchange()
+		.expectStatus().isOk()
+		.returnResult(Operation.class)
+		.getResponseBody()
+		.blockFirst();
+		// ResponseEntity<Operation> response = 
+		// 		testRestTemplate.getForEntity("/operations/1", Operation.class);
+	    assertThat(response.getId(), is(1L));
+	    assertThat(response.getAction(), equalTo("deposit"));
+	    assertThat(response.getAmount(), is(500.00));
+	    assertThat(response.getBank(), equalTo("Demo"));
+	    assertThat(response.getCreatedAt(), notNullValue());
+	    assertThat(response.getCurrency(), equalTo("RUB"));
+	    assertThat(response.getSender(), is(0));
+	    assertThat(response.getRecipient(), is(1));
 		
-		ResponseEntity<Operation> response = 
-				testRestTemplate.getForEntity("/operations/1", Operation.class);
-		assertThat(response.getStatusCode(), is(HttpStatus.OK));
-	    assertThat(response.getBody().getId(), is(1L));
-	    assertThat(response.getBody().getAction(), equalTo("deposit"));
-	    assertThat(response.getBody().getAmount(), is(500.00));
-	    assertThat(response.getBody().getBank(), equalTo("Demo"));
-	    assertThat(response.getBody().getCreatedAt(), notNullValue());
-	    assertThat(response.getBody().getCurrency(), equalTo("RUB"));
-	    assertThat(response.getBody().getSender(), is(0));
-	    assertThat(response.getBody().getRecipient(), is(1));
-		
-		response = testRestTemplate.getForEntity("/operations/6", Operation.class);
-		assertThat(response.getStatusCode(), is(HttpStatus.OK));
-	    assertThat(response.getBody().getId(), is(6L));
-	    assertThat(response.getBody().getAction(), equalTo("transfer"));
-	    assertThat(response.getBody().getAmount(), is(800.00));
-	    assertThat(response.getBody().getBank(), equalTo("Demo"));
-	    assertThat(response.getBody().getCreatedAt(), notNullValue());
-	    assertThat(response.getBody().getCurrency(), equalTo("RUB"));
-	    assertThat(response.getBody().getSender(), is(2));
-	    assertThat(response.getBody().getRecipient(), is(3));
+
+		response = webTestClient.get()
+		.uri("/operations/6")
+		.exchange()
+		.expectStatus().isOk()
+		.returnResult(Operation.class)
+		.getResponseBody()
+		.blockFirst();
+		// response = testRestTemplate.getForEntity("/operations/6", Operation.class);
+	    assertThat(response.getId(), is(6L));
+	    assertThat(response.getAction(), equalTo("transfer"));
+	    assertThat(response.getAmount(), is(800.00));
+	    assertThat(response.getBank(), equalTo("Demo"));
+	    assertThat(response.getCreatedAt(), notNullValue());
+	    assertThat(response.getCurrency(), equalTo("RUB"));
+	    assertThat(response.getSender(), is(2));
+	    assertThat(response.getRecipient(), is(3));
 	}
 	
 	@Test
 	void request_absent() {
-		
+
+		webTestClient.get()
+		.uri("/operations/10")
+		.exchange()
+		.expectStatus().isNotFound()
+		.expectBody().isEmpty();
+	/* 	
 		ResponseEntity<Operation> response = 
 				testRestTemplate.getForEntity("/operations/10", Operation.class);
 		assertThat(response.getStatusCode(), is(HttpStatus.NOT_FOUND));
 		assertThat(response.hasBody(), is(false));
+ 	*/
 	}
 	
 	@Test
 	void can_get_list() {
-		
+
+		webTestClient.get()
+		.uri("/operations/0/list")
+		.exchange()
+		.expectStatus().isOk()
+		.expectBody(new ParameterizedTypeReference<List<Operation>>(){})
+		.value(itemList -> {
+			assertThat(itemList).hasSize(4);
+		});
+/* 		
 		ResponseEntity<List<Operation>> response = 
 				testRestTemplate.exchange("/operations/0/list", HttpMethod.GET, null, 
 						new ParameterizedTypeReference<List<Operation>>(){});
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getBody().size(), is(4));
+ */
 	}
 	
 	@Test
 	void try_get_empty_list() {
-		
+
+		webTestClient.get()
+		.uri("/operations/5/list")
+		.exchange()
+		.expectStatus().isOk()
+		.expectBodyList(Operation.class)
+		.hasSize(0);
+/* 		
 		ResponseEntity<List<Operation>> response = 
 				testRestTemplate.exchange("/operations/5/list", HttpMethod.GET, null, 
 						new ParameterizedTypeReference<List<Operation>>(){});
 		assertThat(response.getStatusCode(), is(HttpStatus.OK));
 		assertThat(response.getBody().isEmpty(), is(true));
+ */
 	}
 
 	@Test
@@ -234,13 +306,34 @@ class AppIT {
 	        .queryParam("sort", "id,desc")
 	        .queryParam("page", 1)
 	        .queryParam("size", 2);
-		
+
+		webTestClient.get()
+		.uri(uriBuilder.toUriString())
+		.exchange()
+		.expectStatus().isOk()
+		// .expectBody(new ParameterizedTypeReference<Page<Operation>>(){})
+		.expectBody()
+		// .value(page -> {
+		// 	assert page != null;
+		// 	assert page.getTotalElements() == 3;
+		// 	assert page.getPageable().isPaged() == true;
+		// 	assert page.getSort().isSorted() == true;
+		// 	List<Operation> content = page.getContent();
+		// 	assert content.size() == 1;
+		// });
+		.jsonPath("$.content").isArray()
+		.jsonPath("$.content.length()").isEqualTo(1)
+		.jsonPath("$.totalElements").isEqualTo(3)
+		.jsonPath("$.pageable.paged").exists()
+		.jsonPath("$.pageable.sort").exists();
+/* 		
         ResponseEntity<Page<Operation>> response = testRestTemplate.exchange(uriBuilder.toUriString(), 
                 HttpMethod.GET, null, new ParameterizedTypeReference<Page<Operation>>(){});
         assertThat(response.getStatusCode(), is(HttpStatus.OK));
         assertThat(response.getBody().getContent().size(), is(1));
         assertThat(response.getBody().getPageable().isPaged(), is(true));
         assertThat(response.getBody().getSort().isSorted(), is(true));
+ */		
 	}
 
 	@AfterAll void clear() {

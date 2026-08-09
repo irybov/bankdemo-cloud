@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -50,18 +51,18 @@ public class BillMapperTest {
 				Stream.generate(() -> new Bill("SEA", 0)).limit(size)
 				.collect(Collectors.toList());
 		int i = 0;
-		for(Bill bill : list) bill.setId(new Integer(++i));
+		for(Bill bill : list) bill.setId(++i);
 		
 		List<BillDTO> dtoList = mapStruct.toList(list);
 		assertAll(
 			() -> assertEquals(dtoList.size(), size), 
 			() -> assertThat(dtoList).hasSameClassAs(new ArrayList<BillDTO>())
 		);		
-		Set<Bill> bills = new HashSet<>(list);
+		Set<Bill> bills = new LinkedHashSet<>(list);
 		Set<BillDTO> dtoSet = mapStruct.toSet(bills);
 		assertAll(
 				() -> assertEquals(dtoSet.size(), size), 
-				() -> assertThat(dtoSet).hasSameClassAs(new HashSet<BillDTO>())
+				() -> assertThat(dtoSet).hasSameClassAs(new LinkedHashSet<BillDTO>())
 		);
 		
 	}

@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
@@ -38,15 +38,19 @@ import org.springframework.web.server.ResponseStatusException;
 import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-import io.swagger.annotations.ResponseHeader;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 
-@Api(description = "Account's microservice controller")
+@Tag(name = "Account's microservice controller")
 @RestController
 @RequestMapping("/accounts")
 @RequiredArgsConstructor
@@ -55,20 +59,25 @@ public class AccountController {
 	
 	private final AccountService service;
 	
-	@ApiOperation("Registers new account")
+	@Operation(description = "Registers new account")
 	@ApiResponses(value = {
-			@ApiResponse(code = 201, message = ""), 
-			@ApiResponse(code = 400, message = "", responseContainer = "List", response = String.class)})
+		@ApiResponse(responseCode = "201"), 
+		@ApiResponse(responseCode = "404", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
+	})
 	@PostMapping()
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(@Valid @RequestBody Registration registration) {service.create(registration);}
 	
-	@ApiOperation("Returns JWT")
+	@Operation(description = "Returns JWT")
 	@ApiResponses(value = {
-			@ApiResponse(code = 200, message = "", 
-		responseHeaders = @ResponseHeader(name = "Token", description = "", response = String.class)), 
-			@ApiResponse(code = 400, message = ""), 
-			@ApiResponse(code = 404, message = "")})
+		@ApiResponse(responseCode = "200", headers = @Header(
+			name = "Token", 
+			description = "Security token", 
+			schema = @Schema(type = "string")
+		)), 
+		@ApiResponse(responseCode = "400"), 
+		@ApiResponse(responseCode = "404")
+	})
 	@RequestMapping(method = RequestMethod.HEAD)
 	public void getToken(@Pattern(regexp = "\\d{10}[:]{1}.{10,60}", message = "Header should match pattern") 
 			@RequestHeader(name = "Login") String header, HttpServletResponse res) {
@@ -79,10 +88,11 @@ public class AccountController {
 //	@GetMapping("/{id}")
 //	public AccountDTO getOne(@PathVariable int id) {return service.getOne(id);}
 	
-	@ApiOperation("Gets one account")
+	@Operation(description = "Gets one account")
 	@ApiResponses(value = {
-			@ApiResponse(code = 200, message = "", response = AccountDTO.class), 
-			@ApiResponse(code = 404, message = "")})
+		@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = AccountDTO.class))), 
+		@ApiResponse(responseCode = "404")
+	})
 	@GetMapping("/{phone}")
 	public AccountDTO getOne(@PathVariable String phone) {return service.getOne(phone);} 
 //			@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
@@ -90,16 +100,20 @@ public class AccountController {
 //		else {throw new SecurityException();}
 //	}
 
-	@ApiOperation("Gets list of accounts")
-	@ApiResponses(@ApiResponse(code = 200, message = "", responseContainer = "List", response = AccountDTO.class))
+	@Operation(description = "Gets list of accounts")
+	@ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = AccountDTO.class))))
 	@GetMapping
 	public List<AccountDTO> getAll() {return service.getAll();}
 	
-	@ApiOperation("Changes account's password")
+	@Operation(description = "Changes account's password")
 	@ApiResponses(value = {
-			@ApiResponse(code = 200, message = ""), 
-			@ApiResponse(code = 400, message = "", responseContainer = "List", response = String.class)})
-	@ApiParam(value = "Password should be 10-60 symbols length", required = true)
+			@ApiResponse(responseCode = "200"), 
+			@ApiResponse(responseCode = "400", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
+	})
+	@Parameters({	
+		@Parameter(name = "phone", description = "Phone number must not be blank", required = true, schema = @Schema(type = "string", format = "^\\d{10}$")), 
+		@Parameter(name = "password", description = "Password should be 10-60 symbols length", required = true, schema = @Schema(type = "string"))
+	})
 	@PatchMapping("/{phone}")
 	public void changePassword(@PathVariable String phone, 
 			@NotBlank(message = "Password must not be blank") 
@@ -108,11 +122,14 @@ public class AccountController {
 		service.changePassword(phone, password);
 	}
 	
-	@ApiOperation("Adds new bill to account")
+	@Operation(description = "Adds new bill to account")
 	@ApiResponses(value = {
-			@ApiResponse(code = 201, message = "", response = BillDTO.class), 
-			@ApiResponse(code = 400, message = "", responseContainer = "List", response = String.class)})
-	@ApiParam(value = "Currency should be 3 capital letters", required = true, format = "^[A-Z]{3}$")
+		@ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = BillDTO.class))), 
+		@ApiResponse(responseCode = "400", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))})
+	@Parameters({	
+		@Parameter(name = "currency", description = "Currency should be 3 capital letters", required = true, schema = @Schema(type = "string", format = "^[A-Z]{3}$")), 
+		@Parameter(name = "phone", description = "Phone number must not be blank", required = true, schema = @Schema(type = "string", format = "^\\d{10}$"))
+	})
 	@PostMapping("/{phone}/bills")
 	@ResponseStatus(HttpStatus.CREATED)
 	public BillDTO addBill(@PathVariable String phone, 
@@ -124,8 +141,8 @@ public class AccountController {
 //		else {throw new SecurityException();}
 	}
 	
-	@ApiOperation("Deletes existing bill from account")
-	@ApiResponses(@ApiResponse(code = 204, message = ""))
+	@Operation(description = "Deletes existing bill from account")
+	@ApiResponse(responseCode = "204")
 	@DeleteMapping("/{phone}/bills/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteBill(@PathVariable String phone, @PathVariable Integer id) {
@@ -152,7 +169,7 @@ public class AccountController {
     
     @ExceptionHandler(ResponseStatusException.class)
     protected ResponseEntity<String> handleSearchingException(ResponseStatusException e) {
-    	return new ResponseEntity<String>(e.getReason(), e.getStatus());
+    	return new ResponseEntity<String>(e.getReason(), e.getStatusCode());
     }
     
 }

@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.16</version>
+		<version>4.1.0</version>
 <!--		<relativePath/> lookup parent from repository -->
 	</parent>
 	
@@ -19,13 +19,13 @@
 		<module>notificator</module>
 		<module>operation</module>
 		<module>registry</module>
-    	<module>shared</module>
+		<module>shared</module>
 	</modules>
 	
 	<groupId>com.github.irybov</groupId>
 	<artifactId>bankdemo-cloud</artifactId>
 	<packaging>pom</packaging>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.2.1-SNAPSHOT</version>
 	<name>Bank demo</name>
 	<description>Demo project for Spring Boot microservices</description>
 	<developers>
@@ -40,12 +40,15 @@
 	</developers>
 
 	<properties>
-		<java.version>1.8</java.version>
-		<spring-cloud.version>2021.0.9</spring-cloud.version>
-		<spring-boot.version>2.7.16</spring-boot.version>
+		<java.version>17</java.version>
+		<spring-cloud.version>2025.1.2</spring-cloud.version>
+		<spring-boot.version>4.1.0</spring-boot.version>
+		<springdoc.version>3.0.3</springdoc.version>
 		<tests.skip>true</tests.skip>
-		<mapstruct.version>1.3.1.Final</mapstruct.version>
-<!-- 		<jjwt.version>0.12.6</jjwt.version> -->
+		<mapstruct.version>1.6.3</mapstruct.version>
+		<bval.version>3.0.2</bval.version>
+		<infinispan.version>16.2.1</infinispan.version>
+		<hazelcast.version>5.7.0</hazelcast.version>
 	</properties>
 	
 	<dependencyManagement>

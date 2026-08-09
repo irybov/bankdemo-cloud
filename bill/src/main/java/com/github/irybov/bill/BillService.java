@@ -16,8 +16,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.cloud.stream.annotation.EnableBinding;
-import org.springframework.cloud.stream.messaging.Source;
+// import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.function.StreamBridge;
+// import org.springframework.cloud.stream.messaging.Source;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -31,7 +32,7 @@ import com.github.irybov.shared.BillDTO;
 
 import lombok.RequiredArgsConstructor;
 
-@EnableBinding(Source.class)
+// @EnableBinding(Source.class)
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -41,7 +42,8 @@ public class BillService {
 	private final BillMapper mapStruct;
 	private final BillJDBC jdbc;
 	private final JdbcTemplate template;
-	private final Source source;
+	// private final Source source;
+	private final StreamBridge streamBridge;
 	
 	@Lazy
 	@Autowired
@@ -134,7 +136,8 @@ public class BillService {
 		});
 */
 		Message<Map<Integer, Double>> message = MessageBuilder.withPayload(data).build();
-		source.output().send(message);
+		// source.output().send(message);
+		streamBridge.send("output-out-0", message); 
 	}
 	
 	@Caching(evict = {

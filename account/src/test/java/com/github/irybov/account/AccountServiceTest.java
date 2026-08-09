@@ -28,8 +28,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Validator;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Validator;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;

@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.irybov.shared.BillDTO;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

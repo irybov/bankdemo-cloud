@@ -32,8 +32,7 @@ import io.jsonwebtoken.security.Keys;
 import reactor.core.publisher.Mono;
 
 @Component
-public class AuthorizationHeaderFilter extends 
-AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
+public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
 
 	@Autowired
 	private Environment env;
@@ -57,7 +56,7 @@ AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
 		return (exchange, chain) -> {
 			
 			ServerHttpRequest request = exchange.getRequest();
-			if(!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
+			if(!request.getHeaders().containsHeader(HttpHeaders.AUTHORIZATION)) {
 				return onError(exchange, "No authorization header",HttpStatus.UNAUTHORIZED);
 			}
 			String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);

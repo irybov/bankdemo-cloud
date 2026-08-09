@@ -1,15 +1,18 @@
 package com.github.irybov.admin;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @EnableWebSecurity
+@Configuration
 public class Security {
 	
 	@Bean
@@ -22,23 +25,23 @@ public class Security {
 	
 	    http
 	    	.authorizeHttpRequests(urlConfig -> urlConfig
-		            .antMatchers("/assets/**").permitAll()
-		            .mvcMatchers("/login").permitAll().anyRequest().authenticated()
+		            .requestMatchers("/assets/**").permitAll()
+		            .requestMatchers("/login").permitAll().anyRequest().authenticated()
 //		            .antMatchers("/actuator/**").hasRole("ADMIN"))
 		            )
 	        .formLogin(login -> login
 	        		.loginPage("/login")
 	        		.successHandler(successHandler))
 	        .logout(logout -> logout
-	        		.logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
+	        		.logoutRequestMatcher(PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/logout"))
 		            .invalidateHttpSession(true)
 		            .clearAuthentication(true)
 		            .deleteCookies("JSESSIONID")
 		            .logoutSuccessUrl("/login"))
 	        .httpBasic(Customizer.withDefaults())
-	        .csrf()
-	        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-	        .ignoringAntMatchers("/instances", "/instances/*", "/actuator/**");
+	        .csrf(csrf -> csrf
+			.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+			.ignoringRequestMatchers("/instances", "/instances/*", "/actuator/**"));
 		
 		return http.build();
 	}
