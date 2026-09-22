@@ -63,6 +63,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.utility.MountableFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,8 +94,11 @@ public class AppIT {
     @Autowired
     private CacheManager cacheManager;
     static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0")
-        	.withEnv("HZ_CLUSTERNAME", "home")
-            .withExposedPorts(5701);
+            .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast-server.xml"), 
+            		"/opt/hazelcast/config/hazelcast-server.xml")
+            .withEnv("HAZELCAST_CONFIG", "config/hazelcast-server.xml")
+            .withExposedPorts(5701)
+            .waitingFor(Wait.forListeningPort());
     static {hazelcastContainer.start();}
     private static String hazelcastAddress;
     @DynamicPropertySource
@@ -106,7 +111,7 @@ public class AppIT {
         @Primary
         public ClientConfig clientConfig() {
             ClientConfig config = new ClientConfig();
-            config.setClusterName("home");
+            config.setClusterName("flat");
             config.getNetworkConfig().addAddress(hazelcastAddress);
             return config;
         }

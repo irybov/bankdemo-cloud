@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<hazelcast-client xmlns="http://hazelcast.com"
-                  xmlns:xsi="http://w3.org"
-                  xsi:schemaLocation="http://hazelcast.com
-                  http://hazelcast.com/hazelcast-client-config-5.7.xsd">
+<hazelcast-client
+        xsi:schemaLocation="http://www.hazelcast.com/schema/client-config 
+        					http://www.hazelcast.com/schema/client-config/hazelcast-client-config-5.7.xsd"
+        xmlns="http://www.hazelcast.com/schema/client-config"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         
     <cluster-name>home</cluster-name>
         

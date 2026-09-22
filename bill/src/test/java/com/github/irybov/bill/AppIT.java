@@ -56,6 +56,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.MountableFile;
 
@@ -83,10 +84,18 @@ public class AppIT {
 //	@Container
 //	@ServiceConnection
     static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0")
-    	.withEnv("HZ_CLUSTERNAME", "home")
-//        .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast.xml"), "/opt/hazelcast/config/hazelcast.xml")
-//        .withEnv("HAZELCAST_CONFIG", "/opt/hazelcast/config/hazelcast.xml")
-        .withExposedPorts(5701);
+//    	.withEnv("HZ_CLUSTERNAME", "flat")
+//    	.withCreateContainerCmdModifier(cmd -> cmd.withUser("root"))
+        .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast-server.xml"), 
+        		"/opt/hazelcast/config/hazelcast-server.xml")
+        .withEnv("HAZELCAST_CONFIG", "config/hazelcast-server.xml")
+        .withExposedPorts(5701)
+        .waitingFor(Wait.forListeningPort());
+//        .waitingFor(Wait.forHttp("/hazelcast/rest/cluster")
+//                .forStatusCode(200)
+//                .forPort(5701)
+//                .withStartupTimeout(Duration.ofSeconds(10))
+//         );
 //    	.withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withPortBindings(PortBinding.parse("5701:5701")));
 //        .withCreateContainerCmdModifier(cmd -> cmd.withHostConfig(
 //               		new HostConfig().withPortBindings(
@@ -106,7 +115,7 @@ public class AppIT {
         @Primary
         public ClientConfig clientConfig() {
             ClientConfig config = new ClientConfig();
-            config.setClusterName("home");
+            config.setClusterName("flat");
             config.getNetworkConfig().addAddress(hazelcastAddress);
             return config;
         }
