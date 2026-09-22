@@ -24,6 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cloud.stream.binder.test.EnableTestBinder;
 // import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -35,7 +37,9 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
@@ -46,14 +50,26 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.messaging.Message;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.utility.MountableFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.PortBinding;
+import com.github.dockerjava.api.model.Ports;
 import com.github.irybov.shared.BillDTO;
+import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.spring.cache.HazelcastCacheManager;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -61,6 +77,50 @@ import com.hazelcast.core.HazelcastInstance;
 @TestInstance(Lifecycle.PER_CLASS)
 //@Import(TestSupportBinderConfiguration.class)
 public class AppIT {
+	
+	@Autowired
+	private CacheManager cacheManager;
+//	@Container
+//	@ServiceConnection
+    static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0")
+    	.withEnv("HZ_CLUSTERNAME", "home")
+//        .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast.xml"), "/opt/hazelcast/config/hazelcast.xml")
+//        .withEnv("HAZELCAST_CONFIG", "/opt/hazelcast/config/hazelcast.xml")
+        .withExposedPorts(5701);
+//    	.withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withPortBindings(PortBinding.parse("5701:5701")));
+//        .withCreateContainerCmdModifier(cmd -> cmd.withHostConfig(
+//               		new HostConfig().withPortBindings(
+//                    new Ports(ExposedPort.tcp(5701), Ports.Binding.bindPort(5701))
+//               	)));
+    static {hazelcastContainer.start();}
+    private static String hazelcastAddress;
+    @DynamicPropertySource
+    static void hazelcastProperties(DynamicPropertyRegistry registry) {
+        hazelcastAddress = hazelcastContainer.getHost() + ":" + hazelcastContainer.getMappedPort(5701);
+//        registry.add("spring.hazelcast.config", () -> "classpath:hazelcast-client.xml");
+//        registry.add("hazelcast.addresses", () -> hazelcastAddress);
+    }
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        @Primary
+        public ClientConfig clientConfig() {
+            ClientConfig config = new ClientConfig();
+            config.setClusterName("home");
+            config.getNetworkConfig().addAddress(hazelcastAddress);
+            return config;
+        }
+        @Bean
+        @Primary
+        public HazelcastInstance hazelcastInstance() {
+            return HazelcastClient.newHazelcastClient(clientConfig());
+        }
+        @Bean
+        @Primary
+        public CacheManager cacheManager() {
+            return new HazelcastCacheManager(hazelcastInstance());
+        }
+    }
 	
 	@Autowired
 	// private TestRestTemplate restTemplate;
@@ -95,6 +155,7 @@ public class AppIT {
 	@Test
 	void context_loading(ApplicationContext context) {
 		assertThat(context).isNotNull();
+		assertThat(hazelcastContainer.isRunning()).isTrue();
 		
 		// String path = "http://"+uri+":"+port;
 		
@@ -350,13 +411,16 @@ public class AppIT {
 		assertThat(response.getBody().iterator().next().getBalance().doubleValue(), is(7.00));
  */
 	}
-	@AfterAll void clear(CacheManager cacheManager){
+	@AfterAll void clear(){
 		populator = null;
 		cacheManager.getCacheNames()
 		.forEach(cacheName -> {
 			var cache = cacheManager.getCache(cacheName);
 			if (cache != null) cache.clear();
 		});
+        if(hazelcastContainer.isRunning()) {
+           hazelcastContainer.stop(); 
+        }
 	}
 /* 	
 	@AfterAll void clear(HazelcastInstance hazelcastInstance) {

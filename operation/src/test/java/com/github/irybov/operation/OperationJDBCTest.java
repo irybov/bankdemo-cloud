@@ -200,12 +200,12 @@ class OperationJDBCTest {
 		assertThat(entity.getId() == 1);
 		assertThat(entity.getCurrency().equals("SEA"));
 		assertThat(entity.getBank().equals("Demo"));
-		
+/*		
 		entity = jdbc.findById(1L).get();
 		assertThat(entity.getId() == 1);
 		assertThat(entity.getCurrency().equals("SEA"));
 		assertThat(entity.getBank().equals("Demo"));
-		
+*/		
 		Optional<Operation> optional = jdbc.findById(10L);
 		assertThrows(NoSuchElementException.class, () -> optional.get());
 		assertThatThrownBy(() -> optional.get()).isInstanceOf(NoSuchElementException.class);

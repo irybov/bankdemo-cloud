@@ -8,7 +8,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.ChannelInterceptor;
 
-@TestComponent
+@TestComponent("myInterceptor")
 @GlobalChannelInterceptor(patterns = "input-in-0")
 public class MyInterceptor implements ChannelInterceptor {
     

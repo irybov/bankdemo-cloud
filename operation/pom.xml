@@ -190,7 +190,20 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
         			<version>${h2.version}</version>
 		          </dependency>
 		        </dependencies>
-		      </plugin>			
+		      </plugin>
+<!--		      <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-compiler-plugin</artifactId>
+			    <configuration>
+			        <annotationProcessorPaths>
+			            <path>
+			                <groupId>org.projectlombok</groupId>
+			                <artifactId>lombok</artifactId>
+			                <version>${lombok.version}</version>
+			            </path>
+				    </annotationProcessorPaths>
+				</configuration>
+			  </plugin>-->
 		</plugins>
 	</build>
   

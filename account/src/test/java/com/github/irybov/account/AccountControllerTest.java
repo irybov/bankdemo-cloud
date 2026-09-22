@@ -50,10 +50,14 @@ import org.springframework.web.server.ResponseStatusException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
+import com.hazelcast.core.HazelcastInstance;
 
 @WebMvcTest(AccountController.class)
 @Import(AccountMapperImpl.class)
 public class AccountControllerTest {
+	
+    @MockitoBean
+    private HazelcastInstance hazelcastInstance;
 	
 	@MockitoBean
 	private AccountService service;

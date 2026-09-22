@@ -54,12 +54,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.testcontainers.containers.GenericContainer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,6 +71,9 @@ import com.github.irybov.shared.BillDTO;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spring.cache.HazelcastCacheManager;
 
@@ -77,7 +83,7 @@ import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "wiremock.reset-mappings-after-each-test=true")
 @AutoConfigureWebTestClient
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
@@ -85,16 +91,37 @@ public class AppIT {
 	
     @Autowired
     private CacheManager cacheManager;
-/*
-	@TestConfiguration
-	static class CacheManagerConfig {
-		@Bean
-	    @Primary
-		public CacheManager CacheManager() {
-			return new HazelcastCacheManager();
-		}		
-	}
-*/
+    static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0")
+        	.withEnv("HZ_CLUSTERNAME", "home")
+            .withExposedPorts(5701);
+    static {hazelcastContainer.start();}
+    private static String hazelcastAddress;
+    @DynamicPropertySource
+    static void hazelcastProperties(DynamicPropertyRegistry registry) {
+        hazelcastAddress = hazelcastContainer.getHost() + ":" + hazelcastContainer.getMappedPort(5701);
+    }
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        @Primary
+        public ClientConfig clientConfig() {
+            ClientConfig config = new ClientConfig();
+            config.setClusterName("home");
+            config.getNetworkConfig().addAddress(hazelcastAddress);
+            return config;
+        }
+        @Bean
+        @Primary
+        public HazelcastInstance hazelcastInstance() {
+            return HazelcastClient.newHazelcastClient(clientConfig());
+        }
+        @Bean
+        @Primary
+        public CacheManager cacheManager() {
+            return new HazelcastCacheManager(hazelcastInstance());
+        }
+    }
+        
 	@Autowired
 	// private TestRestTemplate testRestTemplate;
 	private WebTestClient webTestClient;
@@ -131,6 +158,7 @@ public class AppIT {
 	@Test
 	void context_loading(ApplicationContext context) {
 		assertThat(context).isNotNull();
+		assertThat(hazelcastContainer.isRunning()).isTrue();
 		
 		// String path = "http://"+uri+":"+port;
 
@@ -638,7 +666,7 @@ public class AppIT {
 		wireMockServer.verify(WireMock.deleteRequestedFor(WireMock.urlEqualTo("/bills/1")));
 	}
 
-	@AfterAll void clear(CacheManager cacheManager) {
+	@AfterAll void clear() {
 		populator = null;
 		wireMockServer.shutdownServer();
 		cacheManager.getCacheNames()

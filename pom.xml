@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.0</version>
+		<version>4.1.1</version>
 <!--		<relativePath/> lookup parent from repository -->
 	</parent>
 	
@@ -40,15 +40,16 @@
 	</developers>
 
 	<properties>
-		<java.version>17</java.version>
-		<spring-cloud.version>2025.1.2</spring-cloud.version>
-		<spring-boot.version>4.1.0</spring-boot.version>
+		<java.version>25</java.version>
+		<spring-cloud.version>2025.1.3</spring-cloud.version>
+		<spring-boot.version>4.1.1</spring-boot.version>
 		<springdoc.version>3.0.3</springdoc.version>
 		<tests.skip>true</tests.skip>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<bval.version>3.0.2</bval.version>
 		<infinispan.version>16.2.1</infinispan.version>
 		<hazelcast.version>5.7.0</hazelcast.version>
+		<!-- <lombok.version>1.18.48</lombok.version> -->
 	</properties>
 	
 	<dependencyManagement>
@@ -86,6 +87,14 @@
                     </excludes>
                 </configuration>
 			</plugin>
+			<plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-compiler-plugin</artifactId>
+	            <configuration>
+		          <release>${java.version}</release>
+		        </configuration>
+		        <version>3.16.0</version>
+	        </plugin>
 			<plugin>
 		        <groupId>org.apache.maven.plugins</groupId>
 		        <artifactId>maven-surefire-plugin</artifactId>

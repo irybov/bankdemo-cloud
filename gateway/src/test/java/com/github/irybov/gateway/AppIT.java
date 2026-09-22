@@ -636,13 +636,14 @@ public class AppIT {
 	void can_get_one_operation() throws JsonMappingException, JsonProcessingException {
 		
 		String requestURI = "/operations/0";
+		String timestamp = mapper.writeValueAsString(Timestamp.from(Instant.now()));
 		String json = """
 						{
-							"id": 0, "createdAt": "mapper.writeValueAsString(Timestamp.from(Instant.now()))", 
+							"id": 0, "createdAt": %s, 
 							"amount": 0.00, "action": "unknown", "currency": "SEA", "sender": 0, 
 							"recipient": 0, "bank": "Demo"
 						}
-						""";
+						""".formatted(timestamp);
 		
 		wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
 				.willReturn(WireMock.aResponse()
@@ -660,9 +661,10 @@ public class AppIT {
 		.headers(h -> h.addAll(headers))
 		.exchange()
 		.expectStatus().isOk()
-		.returnResult(String.class)
-		.getResponseBody()
-        .blockFirst();
+		.expectBody(String.class)
+		.returnResult()
+		.getResponseBody();
+//        .blockFirst();
 /* 
 		ResponseEntity<String> response = 
 				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
@@ -685,12 +687,13 @@ public class AppIT {
 	void can_get_operations_list() throws JsonProcessingException {
 		
 		String requestURI = "/operations/0/list";
+		String timestamp = mapper.writeValueAsString(Timestamp.from(Instant.now()));
 		String data = """
-						{"id": 0, "createdAt": "mapper.writeValueAsString(Timestamp.from(Instant.now()))", 
+						{"id": 0, "createdAt": %s, 
 							"amount": 0.00, "action": "unknown", "currency": "SEA", 
 							"sender": 0, "recipient": 0, "bank": "Demo"
 						}
-						""";
+						""".formatted(timestamp);
 		String json = String.format("[%s,%s]", data, data);
 		
 		wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
@@ -709,9 +712,10 @@ public class AppIT {
 		.headers(h -> h.addAll(headers))
 		.exchange()
 		.expectStatus().isOk()
-		.returnResult(String.class)
-		.getResponseBody()
-        .blockFirst();
+		.expectBody(String.class)
+		.returnResult()
+		.getResponseBody();
+//        .blockFirst();
 /* 		
 		ResponseEntity<String> response = 
 				testRestTemplate.exchange(requestURI, HttpMethod.GET, entity, String.class);
