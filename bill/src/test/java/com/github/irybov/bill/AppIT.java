@@ -83,7 +83,7 @@ public class AppIT {
 	private CacheManager cacheManager;
 //	@Container
 //	@ServiceConnection
-    static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0")
+    static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0-slim")
 //    	.withEnv("HZ_CLUSTERNAME", "flat")
 //    	.withCreateContainerCmdModifier(cmd -> cmd.withUser("root"))
         .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast-server.xml"), 

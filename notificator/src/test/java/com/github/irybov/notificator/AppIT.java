@@ -50,8 +50,8 @@ public class AppIT {
     
     // @Autowired
     // private StreamBridge streamBridge;
-    @Autowired
-    private AmqpAdmin admin;
+//    @Autowired
+//    private AmqpAdmin admin;
     @Autowired
     private RabbitTemplate template;
 
@@ -87,13 +87,13 @@ public class AppIT {
     	assertThat(rabbitmq.isRunning()).isTrue();
 	    assertThat(context.getBean("sinkConfig", SinkConfig.class)).isNotNull();
         assertThat(context.getBean("input")).isNotNull();
-        assertThat(context.getBean("myInterceptor")).isNotNull();
+        assertThat(context.getBean(MyInterceptor.class)).isNotNull();
 	}
 
     @Test
-    void message_consuming(ApplicationContext context) {
+    void message_consuming(@Autowired MyInterceptor interceptor) {
 
-        MyInterceptor interceptor = context.getBean("myInterceptor", MyInterceptor.class);
+//        MyInterceptor interceptor = context.getBean("myInterceptor", MyInterceptor.class);
         final AtomicReference<Message<?>> atomicMessage = interceptor.getAtomicReference();
 
         this.template.convertAndSend(EXCHANGE, KEY, json);
@@ -109,7 +109,7 @@ public class AppIT {
     @Test
     void dead_letters_queue() throws JsonProcessingException {
 
-        Message<String> message = MessageBuilder.withPayload("OMG").build();
+//        Message<String> message = MessageBuilder.withPayload("OMG").build();
 
         this.template.setReceiveTimeout(-1);
         this.template.convertAndSend(EXCHANGE, KEY, "OMG");
@@ -125,13 +125,13 @@ public class AppIT {
             assertThat(received.getBody()).isEqualTo("OMG".getBytes());
     	});
     }
-
+/*
     @AfterAll
-    void clear() {    	
-        this.admin.deleteExchange(EXCHANGE);
-        this.admin.deleteExchange("DLX");
-        this.admin.deleteQueue(INPUT_QUEUE);
-        this.admin.deleteQueue(DLQ);
+    void clear(@Autowired AmqpAdmin admin) {    	
+        admin.deleteExchange(EXCHANGE);
+        admin.deleteExchange("DLX");
+        admin.deleteQueue(INPUT_QUEUE);
+        admin.deleteQueue(DLQ);
     }
-    
+*/    
 }
