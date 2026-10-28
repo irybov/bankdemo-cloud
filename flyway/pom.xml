@@ -1,0 +1,58 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <groupId>com.github.irybov</groupId>
+    <artifactId>bankdemo-cloud</artifactId>
+    <version>1.2.5-SNAPSHOT</version>
+  </parent>
+  
+  <artifactId>flyway</artifactId>
+  <packaging>jar</packaging>
+  <version>${project.parent.version}</version>
+  
+  <dependencies>
+	<dependency>
+	    <groupId>org.flywaydb</groupId>
+	    <artifactId>flyway-maven-plugin</artifactId>
+	    <version>13.10.3</version>
+	</dependency>
+	<dependency>
+	    <groupId>com.h2database</groupId>
+	    <artifactId>h2</artifactId>
+	</dependency>
+  </dependencies>
+  
+  <build>
+	  <plugins>
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-compiler-plugin</artifactId>
+	      </plugin>
+		  <plugin>
+		    <groupId>org.flywaydb</groupId>
+		    <artifactId>flyway-maven-plugin</artifactId>
+<!-- 		    <configuration>
+		        <user>sa</user>
+		        <password></password>
+		        <schemas>
+		            <schema>bankdemo</schema>
+		        </schemas>
+		        <locations>
+                    <location>filesystem:src/main/resources/db/migration</location>
+                </locations>
+		        <cleanDisabled>false</cleanDisabled>
+		        <driver>org.h2.Driver</driver>
+   				<url>jdbc:h2:file:~/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL</url>
+		    </configuration> -->
+		  </plugin>
+		</plugins>
+		
+		<resources>
+	       <resource>
+	           <directory>src/main/resources</directory>
+	           <filtering>true</filtering>
+	       </resource>
+	   </resources>
+	</build>
+</project>

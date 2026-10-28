@@ -15,6 +15,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   <version>${project.parent.version}</version>
   
   	<dependencies>
+  	   	<dependency>
+		    <groupId>de.codecentric</groupId>
+		    <artifactId>spring-boot-admin-starter-client</artifactId>
+		    <version>${spring-boot.version}</version>
+		</dependency>
   		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
@@ -134,10 +139,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-config</artifactId>
 		</dependency>
-		<dependency>	
+<!--		<dependency>	
 		    <groupId>org.springframework.cloud</groupId>
 		    <artifactId>spring-cloud-starter-bootstrap</artifactId>
-		</dependency>
+		</dependency>-->
 <!-- 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
@@ -180,7 +185,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		        </executions>
 		        <configuration>
 		          <jdbcDriver>org.h2.Driver</jdbcDriver>
-		          <jdbcUrl>jdbc:h2:file:~/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL;</jdbcUrl>
+		          <jdbcUrl>jdbc:h2:tcp://localhost/C:\Users\Ivan\demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL</jdbcUrl>
 		          <jdbcUser>sa</jdbcUser>
 		          <jdbcPassword></jdbcPassword>
 		          <packageName>com.github.irybov.operation</packageName>
@@ -196,7 +201,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		          </dependency>
 		        </dependencies>
 		      </plugin>
-<!--		      <plugin>
+		      <plugin>
 			    <groupId>org.apache.maven.plugins</groupId>
 			    <artifactId>maven-compiler-plugin</artifactId>
 			    <configuration>
@@ -208,7 +213,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 			            </path>
 				    </annotationProcessorPaths>
 				</configuration>
-			  </plugin>-->
+			  </plugin>
 		</plugins>
 	</build>
   

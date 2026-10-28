@@ -15,6 +15,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   <version>${project.parent.version}</version>
 
   	<dependencies>
+  	  	<dependency>
+		    <groupId>de.codecentric</groupId>
+		    <artifactId>spring-boot-admin-starter-client</artifactId>
+		    <version>${spring-boot.version}</version>
+		</dependency>
   	    <dependency>
             <groupId>com.github.irybov</groupId>
             <artifactId>shared</artifactId>

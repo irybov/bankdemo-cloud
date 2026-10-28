@@ -1,0 +1,140 @@
+services:
+#  hazelcast:
+#    image: hazelcast/hazelcast:5.7.0-slim
+#    expose:
+#      - "5701"
+#    environment:
+#      - HZ_CLUSTERNAME=home
+#
+#  rabbitmq:
+#    image: rabbitmq:4.3.6-management-alpine
+#    expose:
+#      - "5672"
+#    ports:
+#      - "127.0.0.1:15671:15672"
+#    environment:
+##      RABBITMQ_DEFAULT_USER: "admin"
+#      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+##      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
+##    secrets:
+##      - rabbitmq_password
+
+#  zipkin:
+#    image: openzipkin/zipkin-slim:latest
+#    ports:
+#      - "127.0.0.1:9411:9411"
+
+  config:
+    build:
+      context: ./config
+      dockerfile: Dockerfile
+    develop:
+      watch:
+        - path: ./config/target/config-1.2.5-SNAPSHOT.jar
+          action: rebuild
+    expose:
+      - "8888"
+    environment:
+#      SPRING_APPLICATION_NAME: config
+#      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/app/configs/,file:/app/configs/{application}/
+#      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: configs/, configs/{application}/
+      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///app/configs
+      REGISTRY_SERVICE_NAME: "${REGISTRY_SERVICE_NAME}"
+      ZIPKIN_SERVICE_NAME: "${ZIPKIN_SERVICE_NAME}"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://config:config@localhost:8888/actuator/health/readiness"]
+#      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health/readiness"]
+#      test: ["CMD", "curl", "-f", "-u", "config:config", "http://localhost:8888/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+#    networks:
+#      - my-bridge
+
+  registry:
+    build:
+      context: ./registry
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8761:8761"
+#    deploy:
+#      mode: replicated
+#      replicas: 2
+    depends_on:
+      config:
+        condition: service_healthy
+    environment:
+      - SPRING_APPLICATION_NAME=registry
+#      - SPRING_CLOUD_BOOTSTRAP_ENABLED=true
+#      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
+#      - SPRING_CLOUD_CONFIG_FAIL_FAST=true
+#      - SPRING_CLOUD_CONFIG_USERNAME=config
+#      - SPRING_CLOUD_CONFIG_PASSWORD=config
+    env_file:
+      - .env
+#    networks:
+#      - my-bridge
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8888:8080"
+    depends_on:
+      config:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "admin"
+##      SPRING_CLOUD_BOOTSTRAP_ENABLED: "true"
+##      SPRING_CONFIG_IMPORT: "${SPRING_CONFIG_LOCATION}"
+##      SPRING_CLOUD_CONFIG_FAIL_FAST: "true"
+##      SPRING_CLOUD_CONFIG_USERNAME: "config"
+##      SPRING_CLOUD_CONFIG_PASSWORD: "config"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin:admin@localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  operation:
+    build:
+      context: ./operation
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      registry:
+        condition: service_started
+#      zipkin:
+#        condition: service_started
+      admin:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "operation"
+#      SPRING_CLOUD_BOOTSTRAP_ENABLED: "true"
+#      SPRING_CONFIG_IMPORT: "${SPRING_CONFIG_IMPORT}"
+#      SPRING_CLOUD_CONFIG_FAIL_FAST: "true"
+#      SPRING_CLOUD_CONFIG_USERNAME: "config"
+#      SPRING_CLOUD_CONFIG_PASSWORD: "config"
+##      ZIPKIN_SERVICE_NAME: "${ZIPKIN_SERVICE_NAME}"
+#      SPRING_DATASOURCE_URL: "${SPRING_DATASOURCE_URL}"
+#      SPRING_DATASOURCE_USERNAME: "${SPRING_DATASOURCE_USERNAME}"
+#      SPRING_DATASOURCE_DRIVER_CLASS_NAME: "${SPRING_DATASOURCE_DRIVER_CLASS_NAME}"
+    env_file:
+      - .env
+#    networks:
+#      - my-bridge
+
+#networks:
+#  my-bridge:
+#    driver: bridge
+#secrets:
+#  rabbitmq_password:
+#    file: ./secrets.txt

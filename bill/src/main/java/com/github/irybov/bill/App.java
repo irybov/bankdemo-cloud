@@ -39,7 +39,7 @@ public class App
     public ClientConfig clientConfig() {
         ClientConfig config = new ClientConfig();
         config.setClusterName("home");
-        config.getNetworkConfig().addAddress("127.0.0.1:5701");
+        config.getNetworkConfig().addAddress("host.docker.internal:5701");
         return config;
     }
 

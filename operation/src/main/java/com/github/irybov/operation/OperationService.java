@@ -110,11 +110,8 @@ public class OperationService {
 		return operation;
 	}
 	
-	public Operation getOne(long id) {return jdbc.findById(id).get();}
-	
-	public List<Operation> getList(int id) {
-		return jdbc.findBySenderOrRecipientOrderByIdDesc(id, id);
-	}
+	public Operation getOne(long id) {return jdbc.findById(id).get();}	
+	public List<Operation> getList(int id) {return jdbc.findBySenderOrRecipientOrderByIdDesc(id, id);}
 	
 	public Page<Operation> getPage(int id, String action, Double minval, Double maxval,
 			OffsetDateTime mindate, OffsetDateTime maxdate, Pageable pageable){
