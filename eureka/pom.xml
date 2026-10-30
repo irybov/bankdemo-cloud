@@ -10,7 +10,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
     <version>1.2.5-SNAPSHOT</version>
   </parent>
   
-  <artifactId>registry</artifactId>
+  <artifactId>eureka</artifactId>
   <packaging>jar</packaging>
   <version>${project.parent.version}</version>
   

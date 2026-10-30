@@ -24,8 +24,10 @@ import com.hazelcast.spring.cache.HazelcastCacheManager;
 @EnableDiscoveryClient
 @EnableCaching
 // @ExposeHazelcastObjects(unexposeAll = true)
-public class App 
+public class App
 {
+	@Value("${hazelcast.cluster.name}") String cluster;
+	@Value("${hazelcast.server.addresses}") String[] addresses;
     // @Value("#{ '${infinispan.client.hotrod.server_list}'.split(':')[0] }")
 	// private String host;
 	// @Value("#{ T(Integer).parseInt('${infinispan.client.hotrod.server_list}'.split(':')[1]) }")
@@ -38,8 +40,8 @@ public class App
     @Bean
     public ClientConfig clientConfig() {
         ClientConfig config = new ClientConfig();
-        config.setClusterName("home");
-        config.getNetworkConfig().addAddress("host.docker.internal:5701");
+        config.setClusterName(cluster);
+        config.getNetworkConfig().addAddress(addresses);
         return config;
     }
 

@@ -18,7 +18,7 @@
 		<module>gateway</module>
 		<module>notificator</module>
 		<module>operation</module>
-		<module>registry</module>
+		<module>eureka</module>
 		<module>shared</module>
 		<module>flyway</module>
 	</modules>

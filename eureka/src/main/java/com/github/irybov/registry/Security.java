@@ -16,7 +16,10 @@ public class Security {
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		
 		return http.csrf(csrf -> csrf.disable())
-				   .authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
+				   .authorizeHttpRequests(requests -> requests
+					       .requestMatchers("/eureka/css/**", "/eureka/js/**", "/eureka/fonts/**", "/eureka/images/**")
+					       .permitAll()
+					       .anyRequest().authenticated())
 				   .httpBasic(withDefaults())
 				   .build();
 	}

@@ -1,28 +1,54 @@
-services:
-#  hazelcast:
-#    image: hazelcast/hazelcast:5.7.0-slim
-#    expose:
-#      - "5701"
-#    environment:
-#      - HZ_CLUSTERNAME=home
-#
-#  rabbitmq:
-#    image: rabbitmq:4.3.6-management-alpine
-#    expose:
-#      - "5672"
-#    ports:
-#      - "127.0.0.1:15671:15672"
-#    environment:
-##      RABBITMQ_DEFAULT_USER: "admin"
-#      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
-##      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
-##    secrets:
-##      - rabbitmq_password
+#networks:
+#  my-bridge:
+#    driver: bridge
+secrets:
+  token_secret:
+    file: ./token_secret.txt
 
-#  zipkin:
-#    image: openzipkin/zipkin-slim:latest
-#    ports:
-#      - "127.0.0.1:9411:9411"
+services:
+
+  zipkin:
+    image: openzipkin/zipkin-slim:latest
+    ports:
+      - "127.0.0.1:9411:9411"
+    healthcheck:
+      test: ["CMD", "docker-healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management-alpine
+    expose:
+      - "5672"
+    ports:
+      - "127.0.0.1:15671:15672"
+    environment:
+#      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+#      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  hazelcast:
+    image: hazelcast/hazelcast:5.7.0-slim
+    expose:
+      - "5701"
+    environment:
+      - HZ_CLUSTERNAME=${HAZELCAST_CLUSTER_NAME}
+    healthcheck:
+      # test: ["CMD", "nc", "-z", "localhost", "5701"]
+      # Alternatively, use Hazelcast script/health endpoint if available in your image version:
+      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
 
   config:
     build:
@@ -35,44 +61,16 @@ services:
     expose:
       - "8888"
     environment:
-#      SPRING_APPLICATION_NAME: config
 #      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/app/configs/,file:/app/configs/{application}/
 #      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: configs/, configs/{application}/
       SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///app/configs
-      REGISTRY_SERVICE_NAME: "${REGISTRY_SERVICE_NAME}"
-      ZIPKIN_SERVICE_NAME: "${ZIPKIN_SERVICE_NAME}"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://config:config@localhost:8888/actuator/health/readiness"]
-#      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health/readiness"]
 #      test: ["CMD", "curl", "-f", "-u", "config:config", "http://localhost:8888/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
-#    networks:
-#      - my-bridge
-
-  registry:
-    build:
-      context: ./registry
-      dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:8761:8761"
-#    deploy:
-#      mode: replicated
-#      replicas: 2
-    depends_on:
-      config:
-        condition: service_healthy
-    environment:
-      - SPRING_APPLICATION_NAME=registry
-#      - SPRING_CLOUD_BOOTSTRAP_ENABLED=true
-#      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
-#      - SPRING_CLOUD_CONFIG_FAIL_FAST=true
-#      - SPRING_CLOUD_CONFIG_USERNAME=config
-#      - SPRING_CLOUD_CONFIG_PASSWORD=config
-    env_file:
-      - .env
 #    networks:
 #      - my-bridge
 
@@ -87,11 +85,6 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "admin"
-##      SPRING_CLOUD_BOOTSTRAP_ENABLED: "true"
-##      SPRING_CONFIG_IMPORT: "${SPRING_CONFIG_LOCATION}"
-##      SPRING_CLOUD_CONFIG_FAIL_FAST: "true"
-##      SPRING_CLOUD_CONFIG_USERNAME: "config"
-##      SPRING_CLOUD_CONFIG_PASSWORD: "config"
     env_file:
       - .env
     healthcheck:
@@ -99,7 +92,62 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 10s
+
+  eureka:
+    build:
+      context: ./eureka
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8761:8761"
+#    deploy:
+#      mode: replicated
+#      replicas: 2
+    depends_on:
+      config:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+    environment:
+      - SPRING_APPLICATION_NAME=eureka
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://eureka:eureka@localhost:8761/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+#    networks:
+#      - my-bridge
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "gateway"
+      TOKEN_LIFETIME: "300"
+      TOKEN_SECRET_FILE: "/run/secrets/token_secret"
+    env_file:
+      - .env
+    secrets:
+      - token_secret
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   operation:
     build:
@@ -110,31 +158,91 @@ services:
     depends_on:
       config:
         condition: service_healthy
-      registry:
-        condition: service_started
-#      zipkin:
-#        condition: service_started
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
       admin:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "operation"
-#      SPRING_CLOUD_BOOTSTRAP_ENABLED: "true"
-#      SPRING_CONFIG_IMPORT: "${SPRING_CONFIG_IMPORT}"
-#      SPRING_CLOUD_CONFIG_FAIL_FAST: "true"
-#      SPRING_CLOUD_CONFIG_USERNAME: "config"
-#      SPRING_CLOUD_CONFIG_PASSWORD: "config"
-##      ZIPKIN_SERVICE_NAME: "${ZIPKIN_SERVICE_NAME}"
-#      SPRING_DATASOURCE_URL: "${SPRING_DATASOURCE_URL}"
-#      SPRING_DATASOURCE_USERNAME: "${SPRING_DATASOURCE_USERNAME}"
-#      SPRING_DATASOURCE_DRIVER_CLASS_NAME: "${SPRING_DATASOURCE_DRIVER_CLASS_NAME}"
     env_file:
       - .env
 #    networks:
 #      - my-bridge
 
-#networks:
-#  my-bridge:
-#    driver: bridge
-#secrets:
-#  rabbitmq_password:
-#    file: ./secrets.txt
+  notificator:
+    build:
+      context: ./notificator
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "notificator"
+    env_file:
+      - .env
+
+  account:
+    build:
+      context: ./account
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      hazelcast:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    environment:
+      - SPRING_APPLICATION_NAME=account
+      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
+      - TOKEN_LIFETIME=300
+      - TOKEN_SECRET_FILE=/run/secrets/token_secret
+    env_file:
+      - .env
+    secrets:
+      - token_secret
+
+  bill:
+    build:
+      context: ./bill
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      hazelcast:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - SPRING_APPLICATION_NAME=bill
+      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
+    env_file:
+      - .env

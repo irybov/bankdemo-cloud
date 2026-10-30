@@ -1,5 +1,8 @@
 package com.github.irybov.account;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -20,6 +23,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -54,6 +58,8 @@ import lombok.RequiredArgsConstructor;
 public class AccountService {
 	
 	private final Environment env;
+	@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}")
+	private String secretFile;
 //    private final Validator validator;
     private final BillClient billClient;
 //	private final RestTemplate restTemplate;
@@ -82,12 +88,18 @@ public class AccountService {
 	
 	public String generateToken(String header) {
 		
+		String secret = null;
+		try {
+			secret = Files.readString(Path.of(secretFile)).stripTrailing();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		String[] login = header.split(":");
 		Account account = self.getAccount(login[0]);
 		if(account.getPassword().equals(login[1])) {
-			SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
-					SignatureAlgorithm.HS256.getJcaName());
-//					Jwts.SIG.HS256);
+//			SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
+			SecretKey key = new SecretKeySpec(secret.getBytes(), SignatureAlgorithm.HS256.getJcaName());
+//			SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
 			Instant now = Instant.now();
 			String token = Jwts.builder()
 					.claim("scope", account.getRoles())

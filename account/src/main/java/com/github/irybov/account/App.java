@@ -2,6 +2,7 @@ package com.github.irybov.account;
 
 import jakarta.validation.Validator;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.CacheManager;
@@ -30,6 +31,8 @@ public class App
     {
     	SpringApplication.run(App.class, args);
     }
+    @Value("${hazelcast.cluster.name}") String cluster;
+    @Value("${hazelcast.server.addresses}") String[] addresses;
 /*    
 	@Bean
 	@LoadBalanced
@@ -48,8 +51,8 @@ public class App
 	@Bean
     public ClientConfig clientConfig() {
         ClientConfig config = new ClientConfig();
-        config.setClusterName("home");
-        config.getNetworkConfig().addAddress("host.docker.internal:5701");
+        config.setClusterName(cluster);
+        config.getNetworkConfig().addAddress(addresses);
         return config;
     }
 

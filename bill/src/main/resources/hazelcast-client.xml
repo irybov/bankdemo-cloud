@@ -9,7 +9,7 @@
         
     <network>
     	<cluster-members>
-    	    <address>localhost</address>
+    	    <address>hazelcast:5701</address>
         </cluster-members>
 <!--         <cluster-routing mode="SINGLE_MEMBER"/> -->
     </network> 

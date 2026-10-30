@@ -1,5 +1,8 @@
 package com.github.irybov.gateway;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -11,6 +14,7 @@ import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.core.env.Environment;
@@ -34,8 +38,10 @@ import reactor.core.publisher.Mono;
 @Component
 public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
 
-	@Autowired
-	private Environment env;
+//	@Autowired
+//	private Environment env;
+	@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}")
+	private String secretFile;
 	
 	public AuthorizationHeaderFilter() {super(Config.class);}
 	
@@ -55,6 +61,13 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 	public GatewayFilter apply(Config config) {
 		return (exchange, chain) -> {
 			
+			String secret = null;
+			try {
+				secret = Files.readString(Path.of(secretFile)).stripTrailing();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
 			ServerHttpRequest request = exchange.getRequest();
 			if(!request.getHeaders().containsHeader(HttpHeaders.AUTHORIZATION)) {
 				return onError(exchange, "No authorization header",HttpStatus.UNAUTHORIZED);
@@ -67,13 +80,13 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 			Map<String, String> variables = uriTemplate.match(path);
 			if(!variables.isEmpty()) {
 				String phone = variables.get("phone");
-				if(checkFraud(phone, jwt)) 
+				if(checkFraud(phone, jwt, secret)) 
 		        	return onError(exchange, "Provided phone does not match expected", HttpStatus.FORBIDDEN);
 			}
-			if(!isActive(jwt))
+			if(!isActive(jwt, secret))
 				return onError(exchange, "This account is currently disabled", HttpStatus.FORBIDDEN);
 			
-			List<String> authorities = getAuthorities(jwt);
+			List<String> authorities = getAuthorities(jwt, secret);
 	        boolean hasRequiredAuthority = authorities.stream()
 	        		.anyMatch(authority -> config.getAuthorities().contains(authority));
 	        if(!hasRequiredAuthority) 
@@ -93,14 +106,14 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
         return response.writeWith(Mono.just(dataBuffer));
     }
     
-	private List<String> getAuthorities(String jwt) {
+	private List<String> getAuthorities(String jwt, String secret) {
 		
 		List<String> returnValue = new ArrayList<>();
 
-		String tokenSecret = env.getProperty("token.secret");
+//		String tokenSecret = env.getProperty("token.secret");
 //		byte[] secretKeyBytes = Base64.getEncoder().encode(tokenSecret.getBytes());
-		byte[] secretKeyBytes = tokenSecret.getBytes();
-		SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
+//		byte[] secretKeyBytes = tokenSecret.getBytes();
+		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
 
 		JwtParser parser = Jwts.parser()
                 .verifyWith(secretKey)
@@ -118,11 +131,11 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 		return returnValue;
 	}
 	
-	private boolean isActive(String jwt) {
+	private boolean isActive(String jwt, String secret) {
 		
-		String tokenSecret = env.getProperty("token.secret");
-		byte[] secretKeyBytes = tokenSecret.getBytes();
-		SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
+//		String tokenSecret = env.getProperty("token.secret");
+//		byte[] secretKeyBytes = tokenSecret.getBytes();
+		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
 
 		JwtParser parser = Jwts.parser()
                 .verifyWith(secretKey)
@@ -132,11 +145,11 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 		return ((Claims) parsedToken.getPayload()).get("active", Boolean.class);
 	}
 	
-	private boolean checkFraud(String phone, String jwt) {
+	private boolean checkFraud(String phone, String jwt, String secret) {
 				
-		String tokenSecret = env.getProperty("token.secret");
-		byte[] secretKeyBytes = tokenSecret.getBytes();
-		SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
+//		String tokenSecret = env.getProperty("token.secret");
+//		byte[] secretKeyBytes = tokenSecret.getBytes();
+		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
 		
 		JwtParser parser = Jwts.parser()
                 .verifyWith(secretKey)
