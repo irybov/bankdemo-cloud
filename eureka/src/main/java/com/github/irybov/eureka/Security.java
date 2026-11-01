@@ -1,4 +1,4 @@
-package com.github.irybov.registry;
+package com.github.irybov.eureka;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

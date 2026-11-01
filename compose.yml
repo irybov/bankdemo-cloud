@@ -4,6 +4,8 @@
 secrets:
   token_secret:
     file: ./token_secret.txt
+  admin_secret:
+    file: ./admin_secret.txt
 
 services:
 
@@ -18,37 +20,38 @@ services:
       retries: 5
       start_period: 25s
 
-  rabbitmq:
-    image: rabbitmq:4.3.6-management-alpine
-    expose:
-      - "5672"
-    ports:
-      - "127.0.0.1:15671:15672"
-    environment:
-#      RABBITMQ_DEFAULT_USER: "admin"
-      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
-#      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 25s
+#  rabbitmq:
+#    image: rabbitmq:4.3.6-management-alpine
+#    expose:
+#      - "5672"
+#    ports:
+#      - "127.0.0.1:15671:15672"
+#    environment:
+##      RABBITMQ_DEFAULT_USER: "admin"
+#      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+##      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
+#      RABBITMQ_ERLANG_COOKIE="d3F8aJ91mKzXq4vB7tN2pL6wY1cS0eG9"
+#    healthcheck:
+#      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 25s
 
-  hazelcast:
-    image: hazelcast/hazelcast:5.7.0-slim
-    expose:
-      - "5701"
-    environment:
-      - HZ_CLUSTERNAME=${HAZELCAST_CLUSTER_NAME}
-    healthcheck:
-      # test: ["CMD", "nc", "-z", "localhost", "5701"]
-      # Alternatively, use Hazelcast script/health endpoint if available in your image version:
-      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 25s
+#  hazelcast:
+#    image: hazelcast/hazelcast:5.7.0-slim
+#    expose:
+#      - "5701"
+#    environment:
+#      - HZ_CLUSTERNAME=${HAZELCAST_CLUSTER_NAME}
+#    healthcheck:
+##       test: ["CMD", "nc", "-z", "localhost", "5701"]
+##       Alternatively, use Hazelcast script/health endpoint if available in your image version:
+#      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 25s
 
   config:
     build:
@@ -78,28 +81,34 @@ services:
     build:
       context: ./admin
       dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:8888:8080"
+    expose:
+      - "8080"
+#    ports:
+#      - "127.0.0.1:8888:8080"
     depends_on:
       config:
+        condition: service_healthy
+      gateway:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "admin"
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin:admin@localhost:8080/actuator/health/readiness"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin:admin@localhost:8080/admin/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
   eureka:
     build:
       context: ./eureka
       dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:8761:8761"
+    expose:
+      - "8761"
+#    ports:
+#      - "127.0.0.1:8761:8761"
 #    deploy:
 #      mode: replicated
 #      replicas: 2
@@ -138,6 +147,7 @@ services:
       SPRING_APPLICATION_NAME: "gateway"
       TOKEN_LIFETIME: "300"
       TOKEN_SECRET_FILE: "/run/secrets/token_secret"
+      ADMIN_SECRET_FILE: "/run/secrets/admin_secret"
     env_file:
       - .env
     secrets:
@@ -149,100 +159,100 @@ services:
       retries: 5
       start_period: 20s
 
-  operation:
-    build:
-      context: ./operation
-      dockerfile: Dockerfile
-    expose:
-      - "8080"
-    depends_on:
-      config:
-        condition: service_healthy
-      eureka:
-        condition: service_healthy
-      zipkin:
-        condition: service_healthy
-      admin:
-        condition: service_healthy
-    environment:
-      SPRING_APPLICATION_NAME: "operation"
-    env_file:
-      - .env
-#    networks:
-#      - my-bridge
-
-  notificator:
-    build:
-      context: ./notificator
-      dockerfile: Dockerfile
-    expose:
-      - "8080"
-    depends_on:
-      config:
-        condition: service_healthy
-      eureka:
-        condition: service_healthy
-      zipkin:
-        condition: service_healthy
-      admin:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      SPRING_APPLICATION_NAME: "notificator"
-    env_file:
-      - .env
-
-  account:
-    build:
-      context: ./account
-      dockerfile: Dockerfile
-    expose:
-      - "8080"
-    depends_on:
-      config:
-        condition: service_healthy
-      eureka:
-        condition: service_healthy
-      zipkin:
-        condition: service_healthy
-      admin:
-        condition: service_healthy
-      hazelcast:
-        condition: service_healthy
-      gateway:
-        condition: service_healthy
-    environment:
-      - SPRING_APPLICATION_NAME=account
-      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
-      - TOKEN_LIFETIME=300
-      - TOKEN_SECRET_FILE=/run/secrets/token_secret
-    env_file:
-      - .env
-    secrets:
-      - token_secret
-
-  bill:
-    build:
-      context: ./bill
-      dockerfile: Dockerfile
-    expose:
-      - "8080"
-    depends_on:
-      config:
-        condition: service_healthy
-      eureka:
-        condition: service_healthy
-      zipkin:
-        condition: service_healthy
-      admin:
-        condition: service_healthy
-      hazelcast:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - SPRING_APPLICATION_NAME=bill
-      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
-    env_file:
-      - .env
+#  operation:
+#    build:
+#      context: ./operation
+#      dockerfile: Dockerfile
+#    expose:
+#      - "8080"
+#    depends_on:
+#      config:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#      zipkin:
+#        condition: service_healthy
+#      admin:
+#        condition: service_healthy
+#    environment:
+#      SPRING_APPLICATION_NAME: "operation"
+#    env_file:
+#      - .env
+##    networks:
+##      - my-bridge
+#
+#  notificator:
+#    build:
+#      context: ./notificator
+#      dockerfile: Dockerfile
+#    expose:
+#      - "8080"
+#    depends_on:
+#      config:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#      zipkin:
+#        condition: service_healthy
+#      admin:
+#        condition: service_healthy
+#      rabbitmq:
+#        condition: service_healthy
+#    environment:
+#      SPRING_APPLICATION_NAME: "notificator"
+#    env_file:
+#      - .env
+#
+#  account:
+#    build:
+#      context: ./account
+#      dockerfile: Dockerfile
+#    expose:
+#      - "8080"
+#    depends_on:
+#      config:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#      zipkin:
+#        condition: service_healthy
+#      admin:
+#        condition: service_healthy
+#      hazelcast:
+#        condition: service_healthy
+#      gateway:
+#        condition: service_healthy
+#    environment:
+#      - SPRING_APPLICATION_NAME=account
+#      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
+#      - TOKEN_LIFETIME=300
+#      - TOKEN_SECRET_FILE=/run/secrets/token_secret
+#    env_file:
+#      - .env
+#    secrets:
+#      - token_secret
+#
+#  bill:
+#    build:
+#      context: ./bill
+#      dockerfile: Dockerfile
+#    expose:
+#      - "8080"
+#    depends_on:
+#      config:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#      zipkin:
+#        condition: service_healthy
+#      admin:
+#        condition: service_healthy
+#      hazelcast:
+#        condition: service_healthy
+#      rabbitmq:
+#        condition: service_healthy
+#    environment:
+#      - SPRING_APPLICATION_NAME=bill
+#      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
+#    env_file:
+#      - .env
