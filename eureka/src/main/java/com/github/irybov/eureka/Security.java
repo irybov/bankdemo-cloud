@@ -17,8 +17,9 @@ public class Security {
 		
 		return http.csrf(csrf -> csrf.disable())
 				   .authorizeHttpRequests(requests -> requests
-					       .requestMatchers("/eureka/css/**", "/eureka/js/**", "/eureka/fonts/**", "/eureka/images/**")
-					       .permitAll()
+						   .requestMatchers("/").permitAll()
+					       .requestMatchers("/css/**", "/js/**", "/fonts/**", "/images/**").permitAll()
+//					       .requestMatchers("/eureka/**").authenticated()
 					       .anyRequest().authenticated())
 				   .httpBasic(withDefaults())
 				   .build();

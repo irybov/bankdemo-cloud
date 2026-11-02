@@ -4,8 +4,8 @@
 secrets:
   token_secret:
     file: ./token_secret.txt
-  admin_secret:
-    file: ./admin_secret.txt
+#  admin_secret:
+#    file: ./admin_secret.txt
 
 services:
 
@@ -18,7 +18,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 25s
+      start_period: 5s
 
 #  rabbitmq:
 #    image: rabbitmq:4.3.6-management-alpine
@@ -64,11 +64,12 @@ services:
     expose:
       - "8888"
     environment:
-#      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/app/configs/,file:/app/configs/{application}/
-#      SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: configs/, configs/{application}/
+      SPRING_CLOUD_CONFIG_USERNAME: "${SPRING_CLOUD_CONFIG_USERNAME}"
+      SPRING_CLOUD_CONFIG_PASSWORD: "${SPRING_CLOUD_CONFIG_PASSWORD}"
       SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///app/configs
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://config:config@localhost:8888/actuator/health/readiness"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
+      http://$${SPRING_CLOUD_CONFIG_USERNAME}:$${SPRING_CLOUD_CONFIG_PASSWORD}@localhost:8888/actuator/health/readiness"]
 #      test: ["CMD", "curl", "-f", "-u", "config:config", "http://localhost:8888/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
@@ -95,11 +96,13 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin:admin@localhost:8080/admin/actuator/health/readiness"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
+      http://$${ADMIN_USERNAME}:$${ADMIN_PASSWORD}@localhost:8080/admin/actuator/health/readiness"]
+#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin:admin@localhost:8080/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 5s
 
   eureka:
     build:
@@ -122,11 +125,13 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://eureka:eureka@localhost:8761/actuator/health/readiness"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
+      http://$${EUREKA_USERNAME}:$${EUREKA_PASSWORD}@localhost:8761/eureka/actuator/health/readiness"]
+#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://eureka:eureka@localhost:8761/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 5s
 #    networks:
 #      - my-bridge
 
@@ -147,7 +152,7 @@ services:
       SPRING_APPLICATION_NAME: "gateway"
       TOKEN_LIFETIME: "300"
       TOKEN_SECRET_FILE: "/run/secrets/token_secret"
-      ADMIN_SECRET_FILE: "/run/secrets/admin_secret"
+#      ADMIN_SECRET_FILE: "/run/secrets/admin_secret"
     env_file:
       - .env
     secrets:
@@ -157,7 +162,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 5s
 
 #  operation:
 #    build:
