@@ -126,7 +126,7 @@ services:
       - .env
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
-      http://$${EUREKA_USERNAME}:$${EUREKA_PASSWORD}@localhost:8761/eureka/actuator/health/readiness"]
+      http://$${EUREKA_USERNAME}:$${EUREKA_PASSWORD}@localhost:8761/actuator/health/readiness"]
 #      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://eureka:eureka@localhost:8761/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
@@ -164,27 +164,27 @@ services:
       retries: 5
       start_period: 5s
 
-#  operation:
-#    build:
-#      context: ./operation
-#      dockerfile: Dockerfile
-#    expose:
-#      - "8080"
-#    depends_on:
-#      config:
-#        condition: service_healthy
-#      eureka:
-#        condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
-#      admin:
-#        condition: service_healthy
-#    environment:
-#      SPRING_APPLICATION_NAME: "operation"
-#    env_file:
-#      - .env
-##    networks:
-##      - my-bridge
+  operation:
+    build:
+      context: ./operation
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "operation"
+    env_file:
+      - .env
+#    networks:
+#      - my-bridge
 #
 #  notificator:
 #    build:
