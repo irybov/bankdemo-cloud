@@ -15,14 +15,16 @@ public class Security {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		
-		return http.csrf(csrf -> csrf.disable())
-				   .authorizeHttpRequests(requests -> requests
-						   .requestMatchers("/").permitAll()
+		return http.csrf(csrf -> csrf
+//					.disable())
+                	.ignoringRequestMatchers("/eureka/**", "/actuator/**"))
+				    .authorizeHttpRequests(requests -> requests
+//						   .requestMatchers("/").permitAll()
 					       .requestMatchers("/css/**", "/js/**", "/fonts/**", "/images/**").permitAll()
 //					       .requestMatchers("/eureka/**").authenticated()
 					       .anyRequest().authenticated())
-				   .httpBasic(withDefaults())
-				   .build();
+				    .httpBasic(withDefaults())
+				    .build();
 	}
 
 }

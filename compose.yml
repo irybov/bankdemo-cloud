@@ -179,6 +179,8 @@ services:
 #        condition: service_healthy
       admin:
         condition: service_healthy
+#      bill:
+#        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "operation"
     env_file:
@@ -202,6 +204,8 @@ services:
 #      admin:
 #        condition: service_healthy
 #      rabbitmq:
+#        condition: service_healthy
+#      bill:
 #        condition: service_healthy
 #    environment:
 #      SPRING_APPLICATION_NAME: "notificator"
@@ -255,6 +259,8 @@ services:
 #      hazelcast:
 #        condition: service_healthy
 #      rabbitmq:
+#        condition: service_healthy
+#      account:
 #        condition: service_healthy
 #    environment:
 #      - SPRING_APPLICATION_NAME=bill
