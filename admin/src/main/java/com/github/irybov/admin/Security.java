@@ -24,58 +24,66 @@ public class Security {
     private final AdminServerProperties adminServer;
     public Security(AdminServerProperties adminServer) {this.adminServer = adminServer;}
     
-    @Value("${spring.boot.admin.ui.public-url}")
-    private String uiUrl;
+//    @Value("${spring.boot.admin.ui.public-url}")
+//    private String dashBoardUrl;
 	
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		
-		final String contextPath = this.adminServer.getContextPath();
-		final var path = PathPatternRequestMatcher.withDefaults().basePath(contextPath);
-	    final String relativeLoginPageUrl = "/login";
+//		final String contextPath = this.adminServer.getContextPath();
+//		final var path = PathPatternRequestMatcher.withDefaults().basePath(contextPath);
+	    final String loginPageUrl = "/login";
 //	    final String absoluteLoginPageUrl = contextPath + relativeLoginPageUrl;
-	    final String absoluteLoginPageUrl = this.adminServer.path("/login");
+//	    final String absoluteLoginPageUrl = this.adminServer.path("/login");
 		
 	    SavedRequestAwareAuthenticationSuccessHandler successHandler = new SavedRequestAwareAuthenticationSuccessHandler();
 	    successHandler.setTargetUrlParameter("redirectTo");
 	    successHandler.setDefaultTargetUrl(this.adminServer.path("/"));
-	    successHandler.setAlwaysUseDefaultTargetUrl(true);
+//	    successHandler.setAlwaysUseDefaultTargetUrl(true);
 		
 		return http.csrf(csrf -> csrf.disable())
 				   .authorizeHttpRequests(requests -> requests
-						   .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+//						   .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 //						   .requestMatchers(path.matcher("/assets/**")).permitAll()
 						   .requestMatchers(this.adminServer.path("/assets/**")).permitAll()
 //						   .requestMatchers(path.matcher(relativeLoginPageUrl)).permitAll()
-//						   .requestMatchers(relativeLoginPageUrl).permitAll()
-						   .requestMatchers(absoluteLoginPageUrl).permitAll()
+						   .requestMatchers(this.adminServer.path(loginPageUrl)).permitAll()
+//						   .requestMatchers(absoluteLoginPageUrl).permitAll()
 						   .requestMatchers(RequestMatchers.anyOf(
 //								   path.matcher("/login"),
 //								   path.matcher(HttpMethod.POST, "/instances"),
-								   PathPatternRequestMatcher.pathPattern(HttpMethod.POST, this.adminServer.path("/instances")),
+								   PathPatternRequestMatcher.withDefaults()
+			                        .matcher(HttpMethod.POST, this.adminServer.path("/instances")),
 //								   path.matcher(HttpMethod.DELETE, "/instances"),
-								   PathPatternRequestMatcher.pathPattern(HttpMethod.DELETE, this.adminServer.path("/instances")),
+								   PathPatternRequestMatcher.withDefaults()
+			                        .matcher(HttpMethod.DELETE, this.adminServer.path("/instances/*")),
 //								   path.matcher("/actuator/**")
-								   PathPatternRequestMatcher.pathPattern(this.adminServer.path("/actuator")),
-								   PathPatternRequestMatcher.pathPattern(this.adminServer.path("/actuator/**"))
+//								   PathPatternRequestMatcher.pathPattern(this.adminServer.path("/actuator")),
+								   PathPatternRequestMatcher.withDefaults()
+			                        .matcher(this.adminServer.path("/actuator/**"))
 					            ))
-					       .permitAll()
+//					       .authenticated()
+						   .permitAll()
+//					       .requestMatchers(
+//					    		   PathPatternRequestMatcher.withDefaults()
+//					    		   .matcher(this.adminServer.path("/actuator/**"))).authenticated()
 					       .anyRequest().authenticated())
 			        .formLogin(login -> login
-			        		.loginPage(absoluteLoginPageUrl)
-			        		.loginProcessingUrl(absoluteLoginPageUrl)
-			        		.successHandler(successHandler)
-			        		.permitAll())
+			        		.loginPage(this.adminServer.path(loginPageUrl))
+//			        		.loginProcessingUrl(relativeLoginPageUrl)
+			        		.successHandler(successHandler))
+//			        		.permitAll())
 			        .logout(logout -> logout
 				        	.logoutRequestMatcher(
-//				        			path.matcher(HttpMethod.POST, "/logout"))
-				        			PathPatternRequestMatcher.pathPattern(HttpMethod.POST, this.adminServer.path("/logout")))
+				        			PathPatternRequestMatcher.withDefaults()
+			                        .matcher(HttpMethod.POST, this.adminServer.path("/logout")))
+//				        			PathPatternRequestMatcher.pathPattern(HttpMethod.POST, this.adminServer.path("/logout")))
 					        .invalidateHttpSession(true)
 					        .clearAuthentication(true)
 					        .deleteCookies("JSESSIONID")
-					        .logoutSuccessUrl(absoluteLoginPageUrl + "?logout"))
-	                .exceptionHandling(exception -> exception
-	                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint(absoluteLoginPageUrl)))
+					        .logoutSuccessUrl(this.adminServer.path(loginPageUrl) + "?logout"))
+//	                .exceptionHandling(exception -> exception
+//	                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint(absoluteLoginPageUrl)))
 				   .httpBasic(withDefaults())
 				   .build();
 	}
