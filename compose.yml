@@ -9,34 +9,40 @@ secrets:
 
 services:
 
-#  zipkin:
-#    image: openzipkin/zipkin-slim:latest
+  zipkin:
+    image: openzipkin/zipkin-slim:latest
+    expose:
+      - "9411"
 #    ports:
 #      - "127.0.0.1:9411:9411"
-#    healthcheck:
-#      test: ["CMD", "docker-healthcheck"]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 5
-#      start_period: 5s
+    healthcheck:
+      test: ["CMD", "docker-healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
-#  rabbitmq:
-#    image: rabbitmq:4.3.6-management-alpine
-#    expose:
-#      - "5672"
+  rabbitmq:
+    image: rabbitmq:4.3.6-management-alpine
+    expose:
+      - "5672"
+      - "15672"
 #    ports:
-#      - "127.0.0.1:15671:15672"
-#    environment:
-##      RABBITMQ_DEFAULT_USER: "admin"
-#      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
-##      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
-#      RABBITMQ_ERLANG_COOKIE="d3F8aJ91mKzXq4vB7tN2pL6wY1cS0eG9"
-#    healthcheck:
-#      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 5
-#      start_period: 25s
+#      - "127.0.0.1:15673:15672"
+    environment:
+#      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+#      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
+      RABBITMQ_ERLANG_COOKIE: "d3F8aJ91mKzXq4vB7tN2pL6wY1cS0eG9"
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbitmq_management path_prefix "/rabbitmq"'
+    volumes:
+      - "./rabbitmq_data:/var/lib/rabbitmq"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
 #  hazelcast:
 #    image: hazelcast/hazelcast:5.7.0-slim
@@ -118,8 +124,8 @@ services:
     depends_on:
       config:
         condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
+      zipkin:
+        condition: service_healthy
     environment:
       - SPRING_APPLICATION_NAME=eureka
     env_file:
@@ -146,8 +152,8 @@ services:
         condition: service_healthy
       eureka:
         condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
+      zipkin:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "gateway"
       TOKEN_LIFETIME: "300"
@@ -175,8 +181,8 @@ services:
         condition: service_healthy
       eureka:
         condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
+      zipkin:
+        condition: service_healthy
       admin:
         condition: service_healthy
 #      bill:

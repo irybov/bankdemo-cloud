@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 .env
 *.txt
+/rabbitmq_data
 
 ### STS ###
 .apt_generated
