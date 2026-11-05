@@ -3,9 +3,8 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-.env
+.env*
 *.txt
-/rabbitmq_data
 
 ### STS ###
 .apt_generated

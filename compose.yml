@@ -1,13 +1,43 @@
-#networks:
-#  my-bridge:
-#    driver: bridge
+networks:
+  api-net:
+    driver: bridge
+  db-net:
+    driver: bridge
+  common-net:
+    driver: bridge
+    internal: true
+    
 secrets:
   token_secret:
     file: ./token_secret.txt
 #  admin_secret:
 #    file: ./admin_secret.txt
 
+#volumes:
+#  h2-data:
+
 services:
+  
+  h2db:
+    build:
+#    container_name: h2db
+      context: .
+      dockerfile: h2.Dockerfile
+    expose:
+      - "8082"
+      - "9092"
+    volumes:
+      - "${USERPROFILE}/h2-data:/opt/h2-data"
+    networks:
+      - common-net
+    healthcheck:
+#      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+#      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092' || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8082/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   zipkin:
     image: openzipkin/zipkin-slim:latest
@@ -15,12 +45,17 @@ services:
       - "9411"
 #    ports:
 #      - "127.0.0.1:9411:9411"
+    environment:
+      - HEALTHCHECK_IP=127.0.0.1
+    networks:
+#      - api-net
+      - common-net
     healthcheck:
       test: ["CMD", "docker-healthcheck"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 15s
 
   rabbitmq:
     image: rabbitmq:4.3.6-management-alpine
@@ -32,57 +67,72 @@ services:
     environment:
 #      RABBITMQ_DEFAULT_USER: "admin"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
-#      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
-      RABBITMQ_ERLANG_COOKIE: "d3F8aJ91mKzXq4vB7tN2pL6wY1cS0eG9"
+#      RABBITMQ_ERLANG_COOKIE: "d3F8aJ91mKzXq4vB7tN2pL6wY1cS0eG9"
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbitmq_management path_prefix "/rabbitmq"'
-    volumes:
-      - "./rabbitmq_data:/var/lib/rabbitmq"
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      COOKIE=$$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1);
+      echo $$COOKIE > /var/lib/rabbitmq/.erlang.cookie;
+      chmod 600 /var/lib/rabbitmq/.erlang.cookie;
+      chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie;
+      exec docker-entrypoint.sh rabbitmq-server
+      "r
+    tmpfs:
+      - "/var/lib/rabbitmq:uid=999,gid=999,mode=700"
+#    volumes:
+#      - "/var/lib/rabbitmq"
+    networks:
+#      - api-net
+      - common-net
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+#      test: ["CMD", "wget", "--spider", "-q", "http://localhost:15672/api/health/checks/alarms"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
 
-#  hazelcast:
-#    image: hazelcast/hazelcast:5.7.0-slim
-#    expose:
-#      - "5701"
-#    environment:
-#      - HZ_CLUSTERNAME=${HAZELCAST_CLUSTER_NAME}
-#    healthcheck:
-##       test: ["CMD", "nc", "-z", "localhost", "5701"]
-##       Alternatively, use Hazelcast script/health endpoint if available in your image version:
-#      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 5
-#      start_period: 25s
+  hazelcast:
+    image: hazelcast/hazelcast:5.7.0-slim
+    expose:
+      - "5701"
+    environment:
+      - HZ_CLUSTERNAME=${HAZELCAST_CLUSTER_NAME}
+    networks:
+      - common-net
+    healthcheck:
+#       test: ["CMD", "nc", "-z", "localhost", "5701"]
+#       Alternatively, use Hazelcast script/health endpoint if available in your image version:
+      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   config:
     build:
       context: ./config
       dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./config/target/config-1.2.5-SNAPSHOT.jar
-          action: rebuild
+#    develop:
+#      watch:
+#        - path: ./config/target/config-1.2.5-SNAPSHOT.jar
+#          action: rebuild
     expose:
       - "8888"
     environment:
       SPRING_CLOUD_CONFIG_USERNAME: "${SPRING_CLOUD_CONFIG_USERNAME}"
       SPRING_CLOUD_CONFIG_PASSWORD: "${SPRING_CLOUD_CONFIG_PASSWORD}"
       SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///app/configs
+    networks:
+      - common-net
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
-      http://$${SPRING_CLOUD_CONFIG_USERNAME}:$${SPRING_CLOUD_CONFIG_PASSWORD}@localhost:8888/actuator/health/readiness"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://$${SPRING_CLOUD_CONFIG_USERNAME}:$${SPRING_CLOUD_CONFIG_PASSWORD}@localhost:8888/actuator/health/readiness"]
 #      test: ["CMD", "curl", "-f", "-u", "config:config", "http://localhost:8888/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
-#    networks:
-#      - my-bridge
 
   admin:
     build:
@@ -95,15 +145,17 @@ services:
     depends_on:
       config:
         condition: service_healthy
-      gateway:
+      eureka:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "admin"
     env_file:
       - .env
+    networks:
+#      - api-net
+      - common-net
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
-      http://$${ADMIN_USERNAME}:$${ADMIN_PASSWORD}@localhost:8080/actuator/health/readiness"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://$${ADMIN_USERNAME}:$${ADMIN_PASSWORD}@localhost:8080/actuator/health/readiness"]
 #      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin:admin@localhost:8080/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
@@ -130,16 +182,16 @@ services:
       - SPRING_APPLICATION_NAME=eureka
     env_file:
       - .env
+    networks:
+#      - api-net
+      - common-net
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider \
-      http://$${EUREKA_USERNAME}:$${EUREKA_PASSWORD}@localhost:8761/actuator/health/readiness"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://$${EUREKA_USERNAME}:$${EUREKA_PASSWORD}@localhost:8761/actuator/health/readiness"]
 #      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://eureka:eureka@localhost:8761/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
-#    networks:
-#      - my-bridge
 
   gateway:
     build:
@@ -154,6 +206,16 @@ services:
         condition: service_healthy
       zipkin:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      account:
+        condition: service_healthy
+      bill:
+        condition: service_healthy
+      operation:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "gateway"
       TOKEN_LIFETIME: "300"
@@ -163,6 +225,34 @@ services:
       - .env
     secrets:
       - token_secret
+    networks:
+      - api-net
+      - common-net
+
+  operation:
+    build:
+      context: ./operation
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+      h2db:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "operation"
+    env_file:
+      - .env
+    networks:
+#      - api-net
+      - common-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s
@@ -170,9 +260,33 @@ services:
       retries: 5
       start_period: 5s
 
-  operation:
+  notificator:
     build:
-      context: ./operation
+      context: ./notificator
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "notificator"
+    env_file:
+      - .env
+    networks:
+      - common-net
+
+  account:
+    build:
+      context: ./account
       dockerfile: Dockerfile
     expose:
       - "8080"
@@ -185,91 +299,66 @@ services:
         condition: service_healthy
       admin:
         condition: service_healthy
-#      bill:
-#        condition: service_healthy
+      hazelcast:
+        condition: service_healthy
+      bill:
+        condition: service_healthy
+      h2db:
+        condition: service_healthy
     environment:
-      SPRING_APPLICATION_NAME: "operation"
+      - SPRING_APPLICATION_NAME=account
+      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
+      - TOKEN_LIFETIME=300
+      - TOKEN_SECRET_FILE=/run/secrets/token_secret
     env_file:
       - .env
-#    networks:
-#      - my-bridge
-#
-#  notificator:
-#    build:
-#      context: ./notificator
-#      dockerfile: Dockerfile
-#    expose:
-#      - "8080"
-#    depends_on:
-#      config:
-#        condition: service_healthy
-#      eureka:
-#        condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
-#      admin:
-#        condition: service_healthy
-#      rabbitmq:
-#        condition: service_healthy
-#      bill:
-#        condition: service_healthy
-#    environment:
-#      SPRING_APPLICATION_NAME: "notificator"
-#    env_file:
-#      - .env
-#
-#  account:
-#    build:
-#      context: ./account
-#      dockerfile: Dockerfile
-#    expose:
-#      - "8080"
-#    depends_on:
-#      config:
-#        condition: service_healthy
-#      eureka:
-#        condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
-#      admin:
-#        condition: service_healthy
-#      hazelcast:
-#        condition: service_healthy
-#      gateway:
-#        condition: service_healthy
-#    environment:
-#      - SPRING_APPLICATION_NAME=account
-#      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
-#      - TOKEN_LIFETIME=300
-#      - TOKEN_SECRET_FILE=/run/secrets/token_secret
-#    env_file:
-#      - .env
-#    secrets:
-#      - token_secret
-#
-#  bill:
-#    build:
-#      context: ./bill
-#      dockerfile: Dockerfile
-#    expose:
-#      - "8080"
-#    depends_on:
-#      config:
-#        condition: service_healthy
-#      eureka:
-#        condition: service_healthy
-#      zipkin:
-#        condition: service_healthy
-#      admin:
-#        condition: service_healthy
-#      hazelcast:
-#        condition: service_healthy
-#      rabbitmq:
-#        condition: service_healthy
-#      account:
-#        condition: service_healthy
-#    environment:
-#      - SPRING_APPLICATION_NAME=bill
-#      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
-#    env_file:
-#      - .env
+    secrets:
+      - token_secret
+    networks:
+#      - api-net
+      - common-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  bill:
+    build:
+      context: ./bill
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      hazelcast:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      operation:
+        condition: service_healthy
+      h2db:
+        condition: service_healthy
+    environment:
+      - SPRING_APPLICATION_NAME=bill
+      - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
+    env_file:
+      - .env
+    networks:
+#      - api-net
+      - common-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
