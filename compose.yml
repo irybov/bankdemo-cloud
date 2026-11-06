@@ -3,6 +3,7 @@ networks:
     driver: bridge
   db-net:
     driver: bridge
+    internal: true
   common-net:
     driver: bridge
     internal: true
@@ -13,23 +14,25 @@ secrets:
 #  admin_secret:
 #    file: ./admin_secret.txt
 
-#volumes:
-#  h2-data:
+volumes:
+  h2-data:
 
 services:
   
   h2db:
     build:
-#    container_name: h2db
       context: .
       dockerfile: h2.Dockerfile
     expose:
       - "8082"
       - "9092"
     volumes:
-      - "${USERPROFILE}/h2-data:/opt/h2-data"
+#      - "${HOME}:/opt/h2-data"
+      - h2-data:/opt/h2-data
     networks:
-      - common-net
+      db-net:
+        aliases:
+          - h2db
     healthcheck:
 #      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
 #      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092' || exit 1"]
@@ -38,6 +41,18 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  flyway:
+    image: flyway/flyway:latest-alpine
+#    command: -url=jdbc:h2:tcp://h2db:9092//opt/h2-data/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL -user=sa -password= migrate
+    volumes:
+      - ./flyway/conf:/flyway/conf
+      - ./flyway/sql:/flyway/sql
+    depends_on:
+      h2db:
+        condition: service_healthy
+    networks:
+      - db-net
 
   zipkin:
     image: openzipkin/zipkin-slim:latest
@@ -55,7 +70,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 25s
 
   rabbitmq:
     image: rabbitmq:4.3.6-management-alpine
@@ -103,7 +118,6 @@ services:
       - common-net
     healthcheck:
 #       test: ["CMD", "nc", "-z", "localhost", "5701"]
-#       Alternatively, use Hazelcast script/health endpoint if available in your image version:
       test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
       interval: 5s
       timeout: 5s
@@ -132,7 +146,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 25s
 
   admin:
     build:
@@ -216,6 +230,8 @@ services:
         condition: service_healthy
       operation:
         condition: service_healthy
+      h2db:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "gateway"
       TOKEN_LIFETIME: "300"
@@ -226,8 +242,9 @@ services:
     secrets:
       - token_secret
     networks:
-      - api-net
-      - common-net
+      db-net:
+      common-net:
+      api-net:
 
   operation:
     build:
@@ -246,6 +263,8 @@ services:
         condition: service_healthy
       h2db:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
     environment:
       SPRING_APPLICATION_NAME: "operation"
     env_file:
@@ -253,12 +272,13 @@ services:
     networks:
 #      - api-net
       - common-net
+      - db-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 15s
 
   notificator:
     build:
@@ -305,6 +325,8 @@ services:
         condition: service_healthy
       h2db:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
     environment:
       - SPRING_APPLICATION_NAME=account
       - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
@@ -317,6 +339,7 @@ services:
     networks:
 #      - api-net
       - common-net
+      - db-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s
@@ -345,8 +368,8 @@ services:
         condition: service_healthy
       operation:
         condition: service_healthy
-      h2db:
-        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
     environment:
       - SPRING_APPLICATION_NAME=bill
       - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
@@ -355,6 +378,7 @@ services:
     networks:
 #      - api-net
       - common-net
+      - db-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s
