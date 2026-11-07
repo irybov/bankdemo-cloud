@@ -16,6 +16,7 @@ secrets:
 
 volumes:
   h2-data:
+#    external: true
 
 services:
   
@@ -44,13 +45,17 @@ services:
 
   flyway:
     image: flyway/flyway:latest-alpine
-#    command: -url=jdbc:h2:tcp://h2db:9092//opt/h2-data/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL -user=sa -password= migrate
+    command: migrate
+#    command: -url=jdbc:h2:tcp://h2db:9092/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL;INIT=CREATE SCHEMA IF NOT EXISTS bankdemo; -user=sa -password= migrate
     volumes:
       - ./flyway/conf:/flyway/conf
       - ./flyway/sql:/flyway/sql
     depends_on:
       h2db:
         condition: service_healthy
+#    environment:
+#      FLYWAY_URL: "jdbc:h2:tcp://h2db:9092/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL"
+#      FLYWAY_USER: "sa"
     networks:
       - db-net
 
@@ -271,8 +276,8 @@ services:
       - .env
     networks:
 #      - api-net
-      - common-net
       - db-net
+      - common-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s
@@ -338,8 +343,8 @@ services:
       - token_secret
     networks:
 #      - api-net
-      - common-net
       - db-net
+      - common-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s
@@ -377,8 +382,8 @@ services:
       - .env
     networks:
 #      - api-net
-      - common-net
       - db-net
+      - common-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/readiness"]
       interval: 5s

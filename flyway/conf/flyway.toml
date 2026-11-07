@@ -1,13 +1,13 @@
 [flyway]
 environment = "default"
-#createSchemas = false
+createSchemas = true
 #initSql = "CREATE SCHEMA IF NOT EXISTS bankdemo"
-schemas = ["bankdemo"]
 locations = ["filesystem:/flyway/sql"]
 outOfOrder = false
 cleanDisabled = true
 
 [environments.default]
-url = "jdbc:h2:tcp://h2db:9092//opt/h2-data/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL"
+url = "jdbc:h2:tcp://h2db:9092/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL;"
 user = "sa"
 password = ""
+schemas = ["bankdemo"]
