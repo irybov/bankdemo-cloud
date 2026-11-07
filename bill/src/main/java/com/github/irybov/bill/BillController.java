@@ -72,17 +72,6 @@ public class BillController {
 			int owner) {
 		return service.create(currency, owner);
 	}
-	@ExceptionHandler(HandlerMethodValidationException.class)
-	public ResponseEntity<List<String>> handleMethodValidationException(HandlerMethodValidationException exc) {
-		List<String> errors = exc.getParameterValidationResults()
-			.stream()
-			.map(ParameterValidationResult::getResolvableErrors)
-			.flatMap(List::stream)
-			.map(MessageSourceResolvable::getDefaultMessage)
-			.collect(Collectors.toList());
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
-	}
-	
 	@Operation(description = "Gets one bill")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BillDTO.class))), 
@@ -120,7 +109,18 @@ public class BillController {
     @ExceptionHandler(value = {NoSuchElementException.class, EmptyResultDataAccessException.class})
     protected void handleSearchingException(RuntimeException e) {}
     
-    @ExceptionHandler(ConstraintViolationException.class)
+    @ExceptionHandler(HandlerMethodValidationException.class)
+	protected ResponseEntity<List<String>> handleMethodValidationException(HandlerMethodValidationException exc) {
+		List<String> errors = exc.getParameterValidationResults()
+			.stream()
+			.map(ParameterValidationResult::getResolvableErrors)
+			.flatMap(List::stream)
+			.map(MessageSourceResolvable::getDefaultMessage)
+			.collect(Collectors.toList());
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+	}
+    
+	@ExceptionHandler(ConstraintViolationException.class)
     protected ResponseEntity<List<String>> handleValidationException(ConstraintViolationException e) {
 	    List<String> violations = new ArrayList<String>();
 	    for(ConstraintViolation<?> violation : e.getConstraintViolations()) {

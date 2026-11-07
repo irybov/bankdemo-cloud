@@ -168,6 +168,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 			<artifactId>zipkin-reporter-brave</artifactId>
 		</dependency>
   	</dependencies>
+
+  <properties>
+    <app.main.class>com.github.irybov.operation.App</app.main.class>
+  </properties>
   	
   	<build>
 		<plugins>
@@ -214,6 +218,34 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 				    </annotationProcessorPaths>
 				</configuration>
 			  </plugin>
+			  <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+    <artifactId>jib-maven-plugin</artifactId>
+    <version>3.5.2</version>
+    <configuration>
+        <from>
+            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
+        </from>
+        <to>
+            <image>bankdemo-cloud-operation</image>
+            <tags>
+                <tag>latest</tag>
+            </tags>
+        </to>
+        <container>
+            <workingDirectory>/app</workingDirectory>
+            <ports>
+                <port>8080</port>
+            </ports>
+            <entrypoint>INHERIT</entrypoint>
+            <args>
+                <arg>java</arg>
+                <arg>-jar</arg>
+                <arg>app.jar</arg>
+            </args>
+        </container>
+    </configuration>
+            </plugin>
 		</plugins>
 	</build>
   

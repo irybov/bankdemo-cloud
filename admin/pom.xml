@@ -41,5 +41,42 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 	 <artifactId>spring-cloud-starter-bootstrap</artifactId>	
    </dependency>-->
   </dependencies>    	
+
+  <properties>
+    <app.main.class>com.github.irybov.admin.App</app.main.class>
+  </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+    <artifactId>jib-maven-plugin</artifactId>
+    <version>3.5.2</version>
+    <configuration>
+        <from>
+            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
+        </from>
+        <to>
+            <image>bankdemo-cloud-admin</image>
+            <tags>
+                <tag>latest</tag>
+            </tags>
+        </to>
+        <container>
+            <workingDirectory>/app</workingDirectory>
+            <ports>
+                <port>8080</port>
+            </ports>
+            <entrypoint>INHERIT</entrypoint>
+            <args>
+                <arg>java</arg>
+                <arg>-jar</arg>
+                <arg>app.jar</arg>
+            </args>
+        </container>
+    </configuration>
+            </plugin>
+        </plugins>
+    </build>
   
 </project>

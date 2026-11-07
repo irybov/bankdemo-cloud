@@ -14,10 +14,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   <packaging>jar</packaging>
   <version>${project.parent.version}</version>
   
-  <properties>
-    <app.main.class>com.github.irybov.config.App</app.main.class>
-  </properties>
-  
   <dependencies>
   	<dependency>
       <groupId>org.springframework.cloud</groupId>
@@ -32,6 +28,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 	    <artifactId>spring-boot-starter-actuator</artifactId>
 	</dependency>
   </dependencies>
+
+  
+  <properties>
+    <app.main.class>com.github.irybov.config.App</app.main.class>
+  </properties>
   
     <build>
         <plugins>
