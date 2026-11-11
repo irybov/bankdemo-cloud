@@ -137,7 +137,7 @@ public class BillService {
 */
 		Message<Map<Integer, Double>> message = MessageBuilder.withPayload(data).build();
 		// source.output().send(message);
-		streamBridge.send("output-out-0", message); 
+		streamBridge.send("output-out-0", message);
 	}
 	
 	@Caching(evict = {

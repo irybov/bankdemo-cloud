@@ -48,8 +48,8 @@ public class AppIT {
     @ServiceConnection
     private static final RabbitMQContainer rabbitmq = new RabbitMQContainer(DockerImageName.parse("rabbitmq:4.3.6-alpine"));
     
-    // @Autowired
-    // private StreamBridge streamBridge;
+// 	  @Autowired
+// 	  private StreamBridge streamBridge;
 //    @Autowired
 //    private AmqpAdmin admin;
     @Autowired
@@ -109,10 +109,11 @@ public class AppIT {
     @Test
     void dead_letters_queue() throws JsonProcessingException {
 
-//        Message<String> message = MessageBuilder.withPayload("OMG").build();
+//        Message<String> message = MessageBuilder.withPayload("XYZ").build();
+    	String corrupted = "XYZ";
 
         this.template.setReceiveTimeout(-1);
-        this.template.convertAndSend(EXCHANGE, KEY, "OMG");
+        this.template.convertAndSend(EXCHANGE, KEY, corrupted);
         // streamBridge.setAsync(true);
         // streamBridge.send("output-in-0", mapper.writeValueAsString(message));
 
@@ -122,7 +123,7 @@ public class AppIT {
             org.springframework.amqp.core.Message received = atomicMessage.get();
             assertThat(received).isNotNull();
             assertThat(received.getMessageProperties().getHeader("x-death").toString()).isNotBlank();
-            assertThat(received.getBody()).isEqualTo("OMG".getBytes());
+            assertThat(received.getBody()).isEqualTo(corrupted.getBytes());
     	});
     }
 /*

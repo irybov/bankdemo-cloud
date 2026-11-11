@@ -296,8 +296,8 @@ services:
         condition: service_healthy
       admin:
         condition: service_healthy
-#      eureka:
-#        condition: service_healthy
+      eureka:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
       zipkin:
@@ -372,6 +372,8 @@ services:
       rabbitmq:
         condition: service_healthy
       operation:
+        condition: service_healthy
+      h2db:
         condition: service_healthy
       flyway:
         condition: service_completed_successfully
