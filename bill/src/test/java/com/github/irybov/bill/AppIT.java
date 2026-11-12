@@ -72,7 +72,10 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.spring.cache.HazelcastCacheManager;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = {
+	    "hazelcast.cluster.name=dummy",
+	    "hazelcast.server.addresses=dummy"
+	})
 @AutoConfigureWebTestClient
 @EnableTestBinder
 @TestInstance(Lifecycle.PER_CLASS)
@@ -81,15 +84,17 @@ public class AppIT {
 	
 	@Autowired
 	private CacheManager cacheManager;
+	private static final int HAZELCAST_PORT = 5701;
+	private static final String HAZELCAST_CONFIG = "hazelcast-server.xml";
 //	@Container
 //	@ServiceConnection
-    static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0-slim")
+	private static final GenericContainer<?> HAZELCAST_CONTAINER = new GenericContainer<>("hazelcast/hazelcast:5.7.0-slim")
 //    	.withEnv("HZ_CLUSTERNAME", "flat")
 //    	.withCreateContainerCmdModifier(cmd -> cmd.withUser("root"))
-        .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast-server.xml"), 
-        		"/opt/hazelcast/config/hazelcast-server.xml")
-        .withEnv("HAZELCAST_CONFIG", "config/hazelcast-server.xml")
-        .withExposedPorts(5701)
+        .withCopyFileToContainer(MountableFile.forClasspathResource(HAZELCAST_CONFIG), 
+        		"/opt/hazelcast/config/" + HAZELCAST_CONFIG)
+        .withEnv("HAZELCAST_CONFIG", "config/" + HAZELCAST_CONFIG)
+        .withExposedPorts(HAZELCAST_PORT)
         .waitingFor(Wait.forListeningPort());
 //        .waitingFor(Wait.forHttp("/hazelcast/rest/cluster")
 //                .forStatusCode(200)
@@ -101,11 +106,11 @@ public class AppIT {
 //               		new HostConfig().withPortBindings(
 //                    new Ports(ExposedPort.tcp(5701), Ports.Binding.bindPort(5701))
 //               	)));
-    static {hazelcastContainer.start();}
+    static {HAZELCAST_CONTAINER.start();}
     private static String hazelcastAddress;
     @DynamicPropertySource
     static void hazelcastProperties(DynamicPropertyRegistry registry) {
-        hazelcastAddress = hazelcastContainer.getHost() + ":" + hazelcastContainer.getMappedPort(5701);
+        hazelcastAddress = HAZELCAST_CONTAINER.getHost() + ":" + HAZELCAST_CONTAINER.getMappedPort(HAZELCAST_PORT);
 //        registry.add("spring.hazelcast.config", () -> "classpath:hazelcast-client.xml");
 //        registry.add("hazelcast.addresses", () -> hazelcastAddress);
     }
@@ -164,7 +169,7 @@ public class AppIT {
 	@Test
 	void context_loading(ApplicationContext context) {
 		assertThat(context).isNotNull();
-		assertThat(hazelcastContainer.isRunning()).isTrue();
+		assertThat(HAZELCAST_CONTAINER.isRunning()).isTrue();
 		
 		// String path = "http://"+uri+":"+port;
 		
@@ -427,8 +432,8 @@ public class AppIT {
 			var cache = cacheManager.getCache(cacheName);
 			if (cache != null) cache.clear();
 		});
-        if(hazelcastContainer.isRunning()) {
-           hazelcastContainer.stop(); 
+        if(HAZELCAST_CONTAINER.isRunning()) {
+           HAZELCAST_CONTAINER.stop(); 
         }
 	}
 /* 	

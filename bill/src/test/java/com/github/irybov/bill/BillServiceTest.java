@@ -57,6 +57,8 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.github.irybov.shared.BillDTO;
 
@@ -96,6 +98,7 @@ public class BillServiceTest {
 		service = new BillService(mapStruct, jdbc, template, streamBridge);
 		ReflectionTestUtils.setField(service, "self", self);
 		dto = mapStruct.toDTO(bill);
+//		TransactionSynchronizationManager.initSynchronization();
 	}
 	
 	@Test
@@ -214,7 +217,7 @@ public class BillServiceTest {
 	void can_update_balance() {
 		
 		// MessageChannel channel = Mockito.mock(MessageChannel.class);
-		
+		TransactionSynchronizationManager.initSynchronization();
 //		List<Bill> bills = new LinkedList<>();
 		Set<Bill> bills = new HashSet<>();
 		Bill stub = new Bill("SEA", 0);
@@ -245,19 +248,25 @@ public class BillServiceTest {
 		bills.add(bill);
 		data.put(billID, positive);
 		service.updateBalance(data);
+		TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
 		assertEquals(5.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
+		
+	    TransactionSynchronizationManager.clearSynchronization();
+	    TransactionSynchronizationManager.initSynchronization();
 		
 		stub.setId(stubID);
 		bills.add(stub);
 		data.put(billID, negative);
 		data.put(stubID, negative);
 		service.updateBalance(data);
+		TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
 		assertEquals(-10.00, bill.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		assertEquals(-15.00, stub.getBalance().setScale(2, RoundingMode.DOWN).doubleValue());
 		
 		verify(jdbc, times(2)).findByIdIn(any(Set.class));
 //		verify(jdbc, times(3)).findById(anyInt());
 		verify(jdbc, times(2)).saveAll(any(Set.class));
+		
 		verify(streamBridge, times(2)).send(anyString(), any(Message.class));
 		// verify(source, times(2)).output();
 		// verify(channel, times(2)).send(any(Message.class));
@@ -265,6 +274,13 @@ public class BillServiceTest {
 //		verify(jdbc, times(3)).findById(anyInt());
 		verify(self, times(3)).getList(anyInt());
 		verify(self, times(3)).getOne(anyInt());
+		verify(self, times(3)).updateCachedBill(any(Bill.class));
+		verify(self, times(3)).updateCachedDTO(any(BillDTO.class));
+		verify(self, times(3)).updateCachedList(anyInt(), any(Set.class));
+		
+	    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+	    	TransactionSynchronizationManager.clearSynchronization();
+	    }
 	}
 	
 	@Test
@@ -296,6 +312,9 @@ public class BillServiceTest {
     	autoClosable.close();
     	service = null;
     	bill.setBalance(new BigDecimal(0.00));
+//        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+//            TransactionSynchronizationManager.clearSynchronization();
+//        }
     }
     @AfterAll
     void clear() {bill = null;}

@@ -85,7 +85,11 @@ import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "wiremock.reset-mappings-after-each-test=true")
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = { 
+	"wiremock.reset-mappings-after-each-test=true", 
+    "hazelcast.cluster.name=dummy",
+    "hazelcast.server.addresses=dummy"
+})
 @AutoConfigureWebTestClient
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
@@ -93,17 +97,19 @@ public class AppIT {
 	
     @Autowired
     private CacheManager cacheManager;
-    static GenericContainer<?> hazelcastContainer = new GenericContainer<>("hazelcast/hazelcast:5.7.0-slim")
-            .withCopyFileToContainer(MountableFile.forClasspathResource("hazelcast-server.xml"), 
-            		"/opt/hazelcast/config/hazelcast-server.xml")
-            .withEnv("HAZELCAST_CONFIG", "config/hazelcast-server.xml")
-            .withExposedPorts(5701)
+    private static final int HAZELCAST_PORT = 5701;
+    private static final String HAZELCAST_CONFIG = "hazelcast-server.xml";
+    private static final GenericContainer<?> HAZELCAST_CONTAINER = new GenericContainer<>("hazelcast/hazelcast:5.7.0-slim")
+            .withCopyFileToContainer(MountableFile.forClasspathResource(HAZELCAST_CONFIG), 
+            		"/opt/hazelcast/config/" + HAZELCAST_CONFIG)
+            .withEnv("HAZELCAST_CONFIG", "config/" + HAZELCAST_CONFIG)
+            .withExposedPorts(HAZELCAST_PORT)
             .waitingFor(Wait.forListeningPort());
-    static {hazelcastContainer.start();}
+    static {HAZELCAST_CONTAINER.start();}
     private static String hazelcastAddress;
     @DynamicPropertySource
     static void hazelcastProperties(DynamicPropertyRegistry registry) {
-        hazelcastAddress = hazelcastContainer.getHost() + ":" + hazelcastContainer.getMappedPort(5701);
+        hazelcastAddress = HAZELCAST_CONTAINER.getHost() + ":" + HAZELCAST_CONTAINER.getMappedPort(HAZELCAST_PORT);
     }
     @TestConfiguration
     static class TestConfig {
@@ -163,7 +169,7 @@ public class AppIT {
 	@Test
 	void context_loading(ApplicationContext context) {
 		assertThat(context).isNotNull();
-		assertThat(hazelcastContainer.isRunning()).isTrue();
+		assertThat(HAZELCAST_CONTAINER.isRunning()).isTrue();
 		
 		// String path = "http://"+uri+":"+port;
 

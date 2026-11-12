@@ -27,6 +27,8 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.github.irybov.shared.BillDTO;
 
@@ -135,9 +137,14 @@ public class BillService {
 		    public int getBatchSize() {return bills.size();}
 		});
 */
-		Message<Map<Integer, Double>> message = MessageBuilder.withPayload(data).build();
-		// source.output().send(message);
-		streamBridge.send("output-out-0", message);
+	    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+	        @Override
+	        public void afterCommit() {
+	            Message<Map<Integer, Double>> message = MessageBuilder.withPayload(data).build();
+	    		// source.output().send(message);
+	            streamBridge.send("output-out-0", message);
+	        }
+	    });
 	}
 	
 	@Caching(evict = {
