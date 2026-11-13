@@ -59,7 +59,9 @@ import io.jsonwebtoken.Jwts;
 // import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = {
+	    "TOKEN_SECRET_FILE=src/test/resources/token_secret.txt"
+	})
 @AutoConfigureWebTestClient
 public class AppIT {
 	

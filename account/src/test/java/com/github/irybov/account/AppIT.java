@@ -86,6 +86,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = { 
+	"TOKEN_SECRET_FILE=src/test/resources/token_secret.txt", 
 	"wiremock.reset-mappings-after-each-test=true", 
     "hazelcast.cluster.name=dummy",
     "hazelcast.server.addresses=dummy"

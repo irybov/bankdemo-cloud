@@ -47,24 +47,17 @@ public class OperationService {
 		
 		Map<Integer, Double> data = new LinkedHashMap<>();
 		switch(dto.getAction()) {
-			case DEPOSIT:
-				data.put(dto.getRecipient(), dto.getAmount());
-				break;
-			case WITHDRAW:
-				data.put(dto.getSender(), -dto.getAmount());
-				break;
-			case TRANSFER:
+			case DEPOSIT -> data.put(dto.getRecipient(), dto.getAmount());
+			case WITHDRAW -> data.put(dto.getSender(), -dto.getAmount());
+			case TRANSFER -> {
 				data.put(dto.getRecipient(), dto.getAmount());
 				data.put(dto.getSender(), -dto.getAmount());
-				break;
-			case EXTERNAL:
-				if(dto.getBank().equals("Demo")) {
-					data.put(dto.getRecipient(), dto.getAmount());
-				}
-				else {
-					data.put(dto.getSender(), -dto.getAmount());
-				}
-				break;
+			}
+			case EXTERNAL -> {
+				if("Demo".equals(dto.getBank())) data.put(dto.getRecipient(), dto.getAmount());
+				else data.put(dto.getSender(), -dto.getAmount());
+			}
+			default -> throw new IllegalArgumentException("Unknown action: " + dto.getAction());
 		}
 		billClient.updateBalance(data);
 //		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
@@ -90,22 +83,9 @@ public class OperationService {
 				.bank(bank);
 		
 		switch(action) {
-			case DEPOSIT:
-				operation = builder
-				.recipient(recipient)
-				.build();
-				break;
-			case WITHDRAW:
-				operation = builder
-				.sender(sender)
-				.build();
-				break;
-			case TRANSFER: case EXTERNAL:
-				operation = builder
-				.sender(sender)
-				.recipient(recipient)
-				.build();
-				break;				
+			case DEPOSIT -> operation = builder.recipient(recipient).build();
+			case WITHDRAW -> operation = builder.sender(sender).build();
+			case TRANSFER, EXTERNAL -> operation = builder.sender(sender).recipient(recipient).build();
 		}		
 		return operation;
 	}
