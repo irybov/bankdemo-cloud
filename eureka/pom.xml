@@ -12,7 +12,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   
   <artifactId>eureka</artifactId>
   <packaging>jar</packaging>
-  <version>${project.parent.version}</version>
   
   <dependencies>
 	<dependency>
@@ -31,61 +30,28 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
      <groupId>org.springframework.cloud</groupId>
      <artifactId>spring-cloud-starter-config</artifactId>
    </dependency>
-<!--   <dependency>	
-	 <groupId>org.springframework.cloud</groupId>	
-	 <artifactId>spring-cloud-starter-bootstrap</artifactId>	
-   </dependency>-->
-<!-- 	<dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-starter-sleuth</artifactId>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-cache</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-sleuth-zipkin</artifactId>
-    </dependency> -->
-    <dependency>
-			<groupId>io.micrometer</groupId>
-			<artifactId>micrometer-tracing-bridge-brave</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.zipkin.reporter2</groupId>
-			<artifactId>zipkin-reporter-brave</artifactId>
-		</dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+    </dependency>
   </dependencies>
-
-  <properties>
-    <app.main.class>com.github.irybov.eureka.App</app.main.class>
-  </properties>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
-    <artifactId>jib-maven-plugin</artifactId>
-    <version>3.5.2</version>
-    <configuration>
-        <from>
-            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
-        </from>
-        <to>
-            <image>bankdemo-cloud-eureka</image>
-            <tags>
-                <tag>latest</tag>
-            </tags>
-        </to>
-        <container>
-            <workingDirectory>/app</workingDirectory>
-            <ports>
-                <port>8761</port>
-            </ports>
-            <entrypoint>INHERIT</entrypoint>
-            <args>
-                <arg>java</arg>
-                <arg>-jar</arg>
-                <arg>app.jar</arg>
-            </args>
-        </container>
-    </configuration>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <container>
+                        <ports>
+                            <port>8761</port>
+                        </ports>
+                    </container>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -53,15 +53,6 @@
 	
 	<dependencyManagement>
 	<dependencies>
-<!-- 	
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-dependencies</artifactId>
-            <version>${spring-boot.version}</version>
-            <scope>import</scope>
-            <type>pom</type>
-        </dependency>
-   -->      
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-dependencies</artifactId>
@@ -73,6 +64,35 @@
 	</dependencyManagement>
 
 	<build>
+	<pluginManagement>
+        	<plugins>
+        	    <plugin>
+                    <groupId>com.google.cloud.tools</groupId>
+                    <artifactId>jib-maven-plugin</artifactId>
+                    <version>3.5.2</version>
+                    <configuration>
+                        <from>
+                            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
+                        </from>
+                        <to>
+                            <image>bankdemo-cloud/${project.artifactId}</image>
+                            <tags>
+                                <tag>${project.version}</tag>
+                            </tags>
+                        </to>
+                        <container>
+                            <workingDirectory>/app</workingDirectory>
+                            <entrypoint>INHERIT</entrypoint>
+                            <args>
+                                <arg>java</arg>
+                                <arg>-jar</arg>
+                                <arg>app.jar</arg>
+                            </args>
+                        </container>
+                    </configuration>
+                </plugin>
+            </plugins>
+    	</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

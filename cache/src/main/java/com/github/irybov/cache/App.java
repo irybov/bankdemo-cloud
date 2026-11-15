@@ -24,7 +24,7 @@ public class App {
     public HazelcastInstance hazelcastInstance() {
 
         Config config = new Config();
-        config.setClusterName("home");
+        config.setClusterName("flat");
         config.getNetworkConfig().setPort(5701).getInterfaces().setEnabled(false);
         config.addMapConfig(new MapConfig("accounts"));
         config.addMapConfig(new MapConfig("bills"));

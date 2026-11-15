@@ -12,7 +12,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   
   <artifactId>config</artifactId>
   <packaging>jar</packaging>
-  <version>${project.parent.version}</version>
   
   <dependencies>
   	<dependency>
@@ -29,7 +28,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 	</dependency>
   </dependencies>
 
-  
   <properties>
     <app.main.class>com.github.irybov.config.App</app.main.class>
   </properties>
@@ -38,39 +36,27 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
         <plugins>
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
-    <artifactId>jib-maven-plugin</artifactId>
-    <version>3.5.2</version>
-    <configuration>
-        <from>
-            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
-        </from>
-        <to>
-            <image>bankdemo-cloud-config</image>
-            <tags>
-<!--                <tag>${project.version}</tag>-->
-                <tag>latest</tag>
-            </tags>
-        </to>
-        <container>
-            <workingDirectory>/app</workingDirectory>
-            <ports>
-                <port>8888</port>
-            </ports>
-            <entrypoint>
-                <arg>sh</arg>
-                <arg>-c</arg>
-                <arg>exec java $JAVA_OPTS -Dspring.cloud.config.server.native.searchLocations="$SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS" -cp /app/resources:/app/classes:/app/libs/* ${app.main.class}</arg>
-            </entrypoint>
-        </container>
-        <extraDirectories>
-            <paths>
-                <path>
-                    <from>src/main/resources/configs</from>
-                    <into>/app/configs</into>
-                </path>
-            </paths>
-        </extraDirectories>
-    </configuration>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <container>
+                        <ports>
+                            <port>8888</port>
+                        </ports>
+                        <entrypoint>
+                            <arg>sh</arg>
+                            <arg>-c</arg>
+                            <arg>exec java $JAVA_OPTS -Dspring.cloud.config.server.native.searchLocations="$SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS" -cp /app/resources:/app/classes:/app/libs/* ${app.main.class}</arg>
+                        </entrypoint>
+                    </container>
+                    <extraDirectories>
+                        <paths>
+                            <path>
+                                <from>src/main/resources/configs</from>
+                                <into>/app/configs</into>
+                            </path>
+                        </paths>
+                    </extraDirectories>
+                </configuration>
             </plugin>
         </plugins>
     </build>

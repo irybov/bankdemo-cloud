@@ -28,8 +28,8 @@ services:
       - "8082"
       - "9092"
     volumes:
-#      - "${HOME}:/opt/h2-data"
-      - h2-data:/opt/h2-data
+      - "${HOME}:/opt/h2-data"
+#      - h2-data:/opt/h2-data
     networks:
       db-net:
         aliases:
@@ -60,13 +60,15 @@ services:
       - db-net
 
   zipkin:
-    image: openzipkin/zipkin-slim:latest
+    image: openzipkin/zipkin:latest
+#    image: openzipkin/zipkin-slim:latest
     expose:
       - "9411"
 #    ports:
 #      - "127.0.0.1:9411:9411"
     environment:
       - HEALTHCHECK_IP=127.0.0.1
+      - RABBIT_ADDRESSES=rabbitmq:5672
     networks:
 #      - api-net
       - common-net
@@ -114,6 +116,7 @@ services:
       start_period: 5s
 
   hazelcast:
+#    image: hazelcast/hazelcast:5.7.0
     image: hazelcast/hazelcast:5.7.0-slim
     expose:
       - "5701"
@@ -122,8 +125,9 @@ services:
     networks:
       - common-net
     healthcheck:
-#       test: ["CMD", "nc", "-z", "localhost", "5701"]
-      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
+      test: ["CMD", "hz-healthcheck"]
+#      test: ["CMD-SHELL", "curl -f http://localhost:5701/hazelcast/health/node-state || exit 1"]
+#      test: ["CMD", "nc", "-z", "localhost", "5701"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -194,8 +198,6 @@ services:
 #      replicas: 2
     depends_on:
       config:
-        condition: service_healthy
-      zipkin:
         condition: service_healthy
     environment:
       - SPRING_APPLICATION_NAME=eureka

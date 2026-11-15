@@ -16,18 +16,19 @@ import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.spring.ExposeHazelcastObjects;
-import com.hazelcast.spring.boot.HazelcastBoot4ObjectExtractionAutoConfiguration;
+//import com.hazelcast.spring.boot.HazelcastBoot4ObjectExtractionAutoConfiguration;
 import com.hazelcast.spring.cache.HazelcastCacheManager;
 
 // @SpringBootApplication(exclude = {CacheMetricsAutoConfiguration.class})
-@SpringBootApplication(exclude = HazelcastBoot4ObjectExtractionAutoConfiguration.class)
+@SpringBootApplication
+//@SpringBootApplication(exclude = HazelcastBoot4ObjectExtractionAutoConfiguration.class)
 @EnableDiscoveryClient
 @EnableCaching
 // @ExposeHazelcastObjects(unexposeAll = true)
 public class App
 {
-	@Value("${hazelcast.cluster.name}") String cluster;
-	@Value("${hazelcast.server.addresses}") String[] addresses;
+//	@Value("${hazelcast.cluster.name}") String cluster;
+//	@Value("${hazelcast.server.addresses}") String[] addresses;
     // @Value("#{ '${infinispan.client.hotrod.server_list}'.split(':')[0] }")
 	// private String host;
 	// @Value("#{ T(Integer).parseInt('${infinispan.client.hotrod.server_list}'.split(':')[1]) }")
@@ -38,7 +39,8 @@ public class App
     }
 
     @Bean
-    public ClientConfig clientConfig() {
+    public ClientConfig clientConfig(@Value("${hazelcast.cluster.name}") String cluster, 
+    								 @Value("${hazelcast.server.addresses}") String[] addresses) {
         ClientConfig config = new ClientConfig();
         config.setClusterName(cluster);
         config.getNetworkConfig().addAddress(addresses);
@@ -46,8 +48,8 @@ public class App
     }
 
     @Bean
-    public HazelcastInstance hazelcastInstance() {
-        return HazelcastClient.newHazelcastClient(clientConfig());
+    public HazelcastInstance hazelcastInstance(ClientConfig clientConfig) {
+        return HazelcastClient.newHazelcastClient(clientConfig);
     }
 /* 
     @Bean
@@ -65,7 +67,7 @@ public class App
     }
  */
     @Bean
-    public CacheManager cacheManager() {
-        return new HazelcastCacheManager(hazelcastInstance());
+    public CacheManager cacheManager(HazelcastInstance hazelcastInstance) {
+        return new HazelcastCacheManager(hazelcastInstance);
     }
 }

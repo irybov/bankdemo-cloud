@@ -11,6 +11,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 //import org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean;
 import org.springframework.web.client.RestTemplate;
@@ -18,21 +19,23 @@ import org.springframework.web.client.RestTemplate;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.spring.boot.HazelcastBoot4ObjectExtractionAutoConfiguration;
+//import com.hazelcast.spring.boot.HazelcastBoot4ObjectExtractionAutoConfiguration;
 import com.hazelcast.spring.cache.HazelcastCacheManager;
 
-@SpringBootApplication(exclude = HazelcastBoot4ObjectExtractionAutoConfiguration.class)
+@SpringBootApplication
+//@SpringBootApplication(exclude = HazelcastBoot4ObjectExtractionAutoConfiguration.class)
 @EnableDiscoveryClient
 @EnableFeignClients
-@EnableCaching
+@EnableCaching(order = 0)
+@EnableTransactionManagement(order = 1)
 public class App 
 {
     public static void main( String[] args )
     {
     	SpringApplication.run(App.class, args);
     }
-    @Value("${hazelcast.cluster.name}") String cluster;
-    @Value("${hazelcast.server.addresses}") String[] addresses;
+//    @Value("${hazelcast.cluster.name}") String cluster;
+//    @Value("${hazelcast.server.addresses}") String[] addresses;
 /*    
 	@Bean
 	@LoadBalanced
@@ -49,7 +52,8 @@ public class App
 	}
 
 	@Bean
-    public ClientConfig clientConfig() {
+    public ClientConfig clientConfig(@Value("${hazelcast.cluster.name}") String cluster, 
+			 						 @Value("${hazelcast.server.addresses}") String[] addresses) {
         ClientConfig config = new ClientConfig();
         config.setClusterName(cluster);
         config.getNetworkConfig().addAddress(addresses);
@@ -57,12 +61,12 @@ public class App
     }
 
     @Bean
-    public HazelcastInstance hazelcastInstance() {
-        return HazelcastClient.newHazelcastClient(clientConfig());
+    public HazelcastInstance hazelcastInstance(ClientConfig clientConfig) {
+        return HazelcastClient.newHazelcastClient(clientConfig);
     }
 	
     @Bean
-    public CacheManager cacheManager() {
-        return new HazelcastCacheManager(hazelcastInstance());
+    public CacheManager cacheManager(HazelcastInstance hazelcastInstance) {
+        return new HazelcastCacheManager(hazelcastInstance);
     }
 }

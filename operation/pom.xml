@@ -12,7 +12,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   
   <artifactId>operation</artifactId>
   <packaging>jar</packaging>
-  <version>${project.parent.version}</version>
   
   	<dependencies>
   	   	<dependency>
@@ -143,11 +142,21 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		    <groupId>org.springframework.cloud</groupId>
 		    <artifactId>spring-cloud-starter-bootstrap</artifactId>
 		</dependency>-->
-<!-- 		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
-		</dependency>
-		<dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+        </dependency>
+<!--        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <version>2.4.0</version>
+            <scope>compile</scope>
+        </dependency>-->
+<!--        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>-->
+<!--		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
 		</dependency> -->
@@ -159,19 +168,37 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-sleuth-zipkin</artifactId>
         </dependency> -->
-		<dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-zipkin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-zipkin-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-micrometer-metrics</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-micrometer-metrics-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+<!--		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-tracing-bridge-brave</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>io.zipkin.reporter2</groupId>
 			<artifactId>zipkin-reporter-brave</artifactId>
-		</dependency>
+		</dependency>-->
+		<dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-micrometer</artifactId>
+        </dependency>
   	</dependencies>
-
-  <properties>
-    <app.main.class>com.github.irybov.operation.App</app.main.class>
-  </properties>
   	
   	<build>
 		<plugins>
@@ -189,7 +216,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		        </executions>
 		        <configuration>
 		          <jdbcDriver>org.h2.Driver</jdbcDriver>
-		          <jdbcUrl>jdbc:h2:tcp://localhost/C:\Users\Ivan\demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL</jdbcUrl>
+		          <jdbcUrl>jdbc:h2:tcp://localhost/${user.home}/demodb;DATABASE_TO_LOWER=TRUE;MODE=PostgreSQL</jdbcUrl>
 		          <jdbcUser>sa</jdbcUser>
 		          <jdbcPassword></jdbcPassword>
 		          <packageName>com.github.irybov.operation</packageName>
@@ -218,33 +245,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 				    </annotationProcessorPaths>
 				</configuration>
 			  </plugin>
-			  <plugin>
+            <plugin>
                 <groupId>com.google.cloud.tools</groupId>
-    <artifactId>jib-maven-plugin</artifactId>
-    <version>3.5.2</version>
-    <configuration>
-        <from>
-            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
-        </from>
-        <to>
-            <image>bankdemo-cloud-operation</image>
-            <tags>
-                <tag>latest</tag>
-            </tags>
-        </to>
-        <container>
-            <workingDirectory>/app</workingDirectory>
-            <ports>
-                <port>8080</port>
-            </ports>
-            <entrypoint>INHERIT</entrypoint>
-            <args>
-                <arg>java</arg>
-                <arg>-jar</arg>
-                <arg>app.jar</arg>
-            </args>
-        </container>
-    </configuration>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <container>
+                        <ports>
+                            <port>8080</port>
+                        </ports>
+                    </container>
+                </configuration>
             </plugin>
 		</plugins>
 	</build>

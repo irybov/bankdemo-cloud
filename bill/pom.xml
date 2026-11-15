@@ -12,7 +12,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
   
   <artifactId>bill</artifactId>
   <packaging>jar</packaging>
-  <version>${project.parent.version}</version>
 
   	<dependencies>
   	  	<dependency>
@@ -141,19 +140,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 		</dependency>
 		<dependency>
 			<groupId>com.hazelcast</groupId>
-			<artifactId>hazelcast</artifactId>
-<!--			<version>${hazelcast.version}</version>-->
-		</dependency>
-		<dependency>
-			<groupId>com.hazelcast</groupId>
 			<artifactId>hazelcast-spring</artifactId>
 <!--			<version>${hazelcast.version}</version>-->
 		</dependency>
-		<dependency>
+<!--		<dependency>
 			<groupId>com.hazelcast</groupId>
 			<artifactId>hazelcast-spring-boot4</artifactId>
 			<version>${hazelcast.version}</version>
-		</dependency>
+		</dependency>-->
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-actuator</artifactId>
@@ -207,19 +201,33 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-sleuth-zipkin</artifactId>
         </dependency> -->
-		<dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-zipkin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-zipkin-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-micrometer-metrics</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-micrometer-metrics-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+<!--		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-tracing-bridge-brave</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>io.zipkin.reporter2</groupId>
 			<artifactId>zipkin-reporter-brave</artifactId>
-		</dependency>
+		</dependency>-->
   	</dependencies>
-
-  <properties>
-    <app.main.class>com.github.irybov.bill.App</app.main.class>
-  </properties>
 
   	<build>
 		<plugins>
@@ -229,19 +237,19 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 			    <configuration>
 			        <annotationProcessorPaths>
 			            <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
+                        </path>
+			            <path>
 			                <groupId>org.mapstruct</groupId>
 			                <artifactId>mapstruct-processor</artifactId>
 			                <version>${mapstruct.version}</version>
-			            </path>
-			            <path>
-			                <groupId>org.projectlombok</groupId>
-			                <artifactId>lombok</artifactId>
-			                <version>${lombok.version}</version>
-			            </path>
-			            <path>
-			                <groupId>org.projectlombok</groupId>
-			                <artifactId>lombok-mapstruct-binding</artifactId>
-				        	<version>0.2.0</version>
 			            </path>
 			        </annotationProcessorPaths>
 			    </configuration>
@@ -264,34 +272,17 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 					</execution>
 				</executions>
 			</plugin>	 -->
-			            <plugin>
+            <plugin>
                 <groupId>com.google.cloud.tools</groupId>
-    <artifactId>jib-maven-plugin</artifactId>
-    <version>3.5.2</version>
-    <configuration>
-        <from>
-            <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
-        </from>
-        <to>
-            <image>bankdemo-cloud-bill</image>
-            <tags>
-                <tag>latest</tag>
-            </tags>
-        </to>
-        <container>
-            <workingDirectory>/app</workingDirectory>
-            <ports>
-                <port>8080</port>
-            </ports>
-            <entrypoint>INHERIT</entrypoint>
-            <args>
-                <arg>java</arg>
-                <arg>-jar</arg>
-                <arg>app.jar</arg>
-            </args>
-        </container>
-    </configuration>
-            </plugin>		
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <container>
+                        <ports>
+                            <port>8080</port>
+                        </ports>
+                    </container>
+                </configuration>
+            </plugin>	
 		</plugins>
 	</build>
   

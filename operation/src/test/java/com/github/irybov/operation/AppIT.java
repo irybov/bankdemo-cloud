@@ -90,8 +90,6 @@ class AppIT {
 	@Value("${local.server.port}")
 	private int port;
 	
-//	@Value("${app.internal-url}")
-//	private static String internalURL;
 	private static WireMockServer wireMockServer;
 	
 	@BeforeAll

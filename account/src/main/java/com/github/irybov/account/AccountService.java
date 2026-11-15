@@ -53,7 +53,6 @@ import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 
 @Service
-@Transactional(readOnly = true, noRollbackFor = Exception.class)
 @RequiredArgsConstructor
 public class AccountService {
 	
@@ -86,6 +85,7 @@ public class AccountService {
 //		}
 	};
 	
+	@Transactional(readOnly = true, noRollbackFor = Exception.class)
 	public String generateToken(String header) {
 		
 		String secret = null;
@@ -118,6 +118,7 @@ public class AccountService {
 	
 //	public AccountDTO getOne(int id) {return mapStruct.toDTO(jdbc.findById(id).get());}
 	
+	@Transactional(readOnly = true, noRollbackFor = Exception.class)
 	public AccountDTO getOne(String phone) {
 		
 		Account account = self.getAccount(phone);
@@ -133,10 +134,12 @@ public class AccountService {
 		return dto;
 	}
 	
+	@Transactional(readOnly = true, noRollbackFor = Exception.class)
 	public List<AccountDTO> getAll() {
 		return mapStruct.toList(Streamable.of(jdbc.findAll()).toList());
 	}
 	
+	@Transactional
 	public void changePassword(String phone, String password) {
 		
 		Account account = self.getAccount(phone);
@@ -144,6 +147,7 @@ public class AccountService {
 		self.update(account);
 	}
 	
+	@Transactional
 	public BillDTO addBill(String phone, String currency) {
 		
 		Account account = self.getAccount(phone);
@@ -159,6 +163,7 @@ public class AccountService {
         return bill;
 	}
 	
+	@Transactional
 	public void deleteBill(String phone, int id) {
 		
 		Account account = self.getAccount(phone);
@@ -167,6 +172,7 @@ public class AccountService {
 		self.update(account);
 	}
 	
+	@Transactional(propagation = Propagation.MANDATORY, noRollbackFor = Exception.class)
 	@Cacheable(cacheNames = ACCOUNTS, key = "#phone", sync = true)
 	public Account getAccount(String phone) {
 		
