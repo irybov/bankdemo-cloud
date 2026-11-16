@@ -107,7 +107,21 @@ public class AppIT {
 	}
 	
 	@Test
-	void context_loading(ApplicationContext context) {assertThat(context).isNotNull();}
+	void context_loading(ApplicationContext context) {
+		assertThat(context).isNotNull();
+		
+		webTestClient.get()
+		.uri("/swagger-ui/index.html")
+		.exchange()
+		.expectStatus().isOk()
+		.expectHeader().contentType(MediaType.TEXT_HTML);
+	    
+		webTestClient.get()
+		.uri("/v3/api-docs")
+		.exchange()
+		.expectStatus().isOk()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON);
+	}
 	
 	@Test
 	void can_register_account() {

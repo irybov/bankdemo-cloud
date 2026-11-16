@@ -111,13 +111,13 @@ class AppIT {
 		.uri("/swagger-ui/index.html")
 		.exchange()
 		.expectStatus().isOk()
-		.expectHeader().exists(HttpHeaders.CONTENT_TYPE).equals(MediaType.TEXT_HTML_VALUE);
+		.expectHeader().contentType(MediaType.TEXT_HTML);
         
 		webTestClient.get()
 		.uri("/v3/api-docs")
 		.exchange()
 		.expectStatus().isOk()
-		.expectHeader().exists(HttpHeaders.CONTENT_TYPE).equals(MediaType.APPLICATION_JSON_VALUE);
+		.expectHeader().contentType(MediaType.APPLICATION_JSON);
 		
 	}
 	

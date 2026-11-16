@@ -177,7 +177,7 @@ public class AppIT {
 		.uri("/swagger-ui/index.html")
 		.exchange()
 		.expectStatus().isOk()
-		.expectHeader().exists(HttpHeaders.CONTENT_TYPE).equals(MediaType.TEXT_HTML_VALUE);
+		.expectHeader().contentType(MediaType.TEXT_HTML);
 /* 
 		ResponseEntity<Void> response = 
 				restTemplate.getForEntity(path + "/swagger-ui/", Void.class);
@@ -188,7 +188,7 @@ public class AppIT {
 		.uri("/v3/api-docs")
 		.exchange()
 		.expectStatus().isOk()
-		.expectHeader().exists(HttpHeaders.CONTENT_TYPE).equals(MediaType.APPLICATION_JSON_VALUE);
+		.expectHeader().contentType(MediaType.APPLICATION_JSON);
 /* 
 		response = 
 				restTemplate.getForEntity(path + "/v3/api-docs", Void.class);
