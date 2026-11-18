@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,8 +28,13 @@ import java.util.stream.Stream;
 import javax.crypto.SecretKey;
 import javax.sql.DataSource;
 
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -80,6 +86,8 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spring.cache.HazelcastCacheManager;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtParser;
@@ -116,6 +124,7 @@ public class AppIT {
     }
     @TestConfiguration
     static class TestConfig {
+    	
         @Bean
         @Primary
         public ClientConfig clientConfig() {
@@ -134,6 +143,13 @@ public class AppIT {
         public CacheManager cacheManager() {
             return new HazelcastCacheManager(hazelcastInstance());
         }
+        
+        @Bean
+        public CloseableHttpClient feignHttpClient() {
+            return HttpClients.custom()
+                    .disableAutomaticRetries()
+                    .build();
+        }
     }
         
 	@Autowired
@@ -148,6 +164,8 @@ public class AppIT {
 	private DataSource dataSource;
 	private ResourceDatabasePopulator populator;
 //	private MockRestServiceServer mockServer;
+	@Autowired
+	private CircuitBreakerRegistry circuitBreakerRegistry;
 	
 	@Value("${server.address}")
 	private String uri;
@@ -166,6 +184,9 @@ public class AppIT {
 		wireMockServer.start();
 //		WireMock.configureFor("localhost", 8761);
 	}
+	
+	@BeforeEach
+	void setup() {wireMockServer.resetRequests();}
 	
 	@Test
 	void context_loading(ApplicationContext context) {
@@ -392,6 +413,7 @@ public class AppIT {
 		// assertThat(response.getStatusCode(), is(HttpStatus.OK));
 //	    assertThat(response.getId(), is(2));
 //	    assertThat(response.getCreatedAt(), notNullValue(Timestamp.class));
+		assertThat(response, notNullValue(AccountDTO.class));
 	    assertThat(response.getUpdatedAt(), nullValue());
 	    assertThat(response.getBirthday(), notNullValue(LocalDate.class));
 	    assertThat(response.getName(), is("Kae"));
@@ -401,10 +423,11 @@ public class AppIT {
 	    assertThat(response.getBills(), notNullValue());
 	    assertThat(response.getBills().size(), is(size));
 	    assertThat(response.isActive(), is(true));
+	    assertThat(response.isBillsUnavailable(), is(false));
 	    
 //	    mockServer.verify();
 //	    mockServer.reset();
-	    wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+	    wireMockServer.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test
@@ -445,28 +468,16 @@ public class AppIT {
 		wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
 		        .willReturn(WireMock.aResponse()
 		        .withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())));
-/*		
-		HttpHeaders headers = new HttpHeaders();
-		headers.set("Login", "1111111111:supervixen");
-		HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);		
-		ResponseEntity<Void> result = 
-				testRestTemplate.exchange("/accounts/login", HttpMethod.HEAD, entity, Void.class);
-		String jwt = result.getHeaders().get("Token").get(0);
 		
-		headers = new HttpHeaders();
-		headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
-		entity = new HttpEntity<>(headers);
-*/		
 		AccountDTO response = webTestClient.get()
-		.uri("/accounts/2222222222")
-		.exchange()
-		.expectStatus().isOk()
-		.returnResult(AccountDTO.class)
-		.getResponseBody()
-		.blockFirst();
-		// ResponseEntity<AccountDTO> response = 
-		// 		testRestTemplate.getForEntity("/accounts/1111111111", AccountDTO.class);
-		// assertThat(response.getStatusCode(), is(HttpStatus.OK));
+			    .uri("/accounts/2222222222")
+			    .exchange()
+			    .expectStatus().isOk()
+			    .expectBody(AccountDTO.class)
+			    .returnResult()
+			    .getResponseBody();
+
+		assertThat(response, notNullValue(AccountDTO.class));
 	    assertThat(response.getUpdatedAt(), nullValue());
 	    assertThat(response.getBirthday(), notNullValue(LocalDate.class));
 	    assertThat(response.getName(), is("Hannah"));
@@ -476,8 +487,13 @@ public class AppIT {
 	    assertThat(response.getBills(), notNullValue());
 	    assertThat(response.getBills().isEmpty(), is(true));
 	    assertThat(response.isActive(), is(true));
+	    assertThat(response.isBillsUnavailable(), is(true));
 	    
-	    wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+//	    wireMockServer.getAllServeEvents().forEach(e ->
+//	    System.out.println("REQ: " + e.getRequest().getLoggedDate() + " | headers=" + e.getRequest().getHeaders()));
+	    
+	    wireMockServer.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+	    assertThat(circuitBreakerRegistry.circuitBreaker("bill").getState(), is(CircuitBreaker.State.CLOSED));
 	}
 
 	@Test
@@ -489,13 +505,14 @@ public class AppIT {
 		        .withStatus(HttpStatus.BAD_REQUEST.value())));
 		
 		AccountDTO response = webTestClient.get()
-		.uri("/accounts/2222222222")
-		.exchange()
-		.expectStatus().isOk()
-		.returnResult(AccountDTO.class)
-		.getResponseBody()
-		.blockFirst();
+			    .uri("/accounts/2222222222")
+			    .exchange()
+			    .expectStatus().isOk()
+			    .expectBody(AccountDTO.class)
+			    .returnResult()
+			    .getResponseBody();
 
+		assertThat(response, notNullValue(AccountDTO.class));
 	    assertThat(response.getUpdatedAt(), nullValue());
 	    assertThat(response.getBirthday(), notNullValue(LocalDate.class));
 	    assertThat(response.getName(), is("Hannah"));
@@ -505,8 +522,10 @@ public class AppIT {
 	    assertThat(response.getBills(), notNullValue());
 	    assertThat(response.getBills().isEmpty(), is(true));
 	    assertThat(response.isActive(), is(true));
+	    assertThat(response.isBillsUnavailable(), is(true));
 	    
-	    wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+	    wireMockServer.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+	    assertThat(circuitBreakerRegistry.circuitBreaker("bill").getState(), is(CircuitBreaker.State.CLOSED));
 	}
 	
 	@Test
@@ -521,8 +540,9 @@ public class AppIT {
 		for(BillDTO bill : bills) {bill.setId(i++);}
 		Set<BillDTO> list = new HashSet<>(bills);
 		
+//		Objects.requireNonNull(cacheManager.getCache("sets")).clear();
 		Cache cache = cacheManager.getCache("sets");
-		cache.put(2, list);
+		cache.put(2, BillsResult.success(list));
 		
 		AccountDTO response = webTestClient.get()
 		.uri("/accounts/1111111111")
@@ -534,6 +554,7 @@ public class AppIT {
 		// ResponseEntity<AccountDTO> response = 
 		// 		testRestTemplate.getForEntity("/accounts/1111111111", AccountDTO.class);
 		// assertThat(response.getStatusCode(), is(HttpStatus.OK));
+		assertThat(response, notNullValue(AccountDTO.class));
 	    assertThat(response.getUpdatedAt(), nullValue());
 	    assertThat(response.getBirthday(), notNullValue(LocalDate.class));
 	    assertThat(response.getName(), is("Kae"));
@@ -543,8 +564,10 @@ public class AppIT {
 	    assertThat(response.getBills(), notNullValue());
 	    assertThat(response.getBills().size(), is(size));
 	    assertThat(response.isActive(), is(true));
+	    assertThat(response.isBillsUnavailable(), is(false));
 	    
 	    cache.evictIfPresent(2);
+	    wireMockServer.verify(WireMock.exactly(0), WireMock.getRequestedFor(WireMock.urlEqualTo("/bills/2/list")));
 	}
 	
 	@Test
@@ -665,7 +688,7 @@ public class AppIT {
 	    
 //	    mockServer.verify();
 //	    mockServer.reset();
-		wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));
+		wireMockServer.verify(WireMock.exactly(1), WireMock.postRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test
@@ -710,7 +733,7 @@ public class AppIT {
 		// 		null, Void.class);
 		// assertThat(response.getStatusCode(), is(HttpStatus.NO_CONTENT));
 		
-		wireMockServer.verify(WireMock.deleteRequestedFor(WireMock.urlEqualTo("/bills/1")));
+		wireMockServer.verify(WireMock.exactly(1), WireMock.deleteRequestedFor(WireMock.urlEqualTo("/bills/1")));
 	}
 
 	@AfterAll void clear() {

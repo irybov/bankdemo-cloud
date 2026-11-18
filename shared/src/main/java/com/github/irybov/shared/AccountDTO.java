@@ -27,5 +27,5 @@ public class AccountDTO {
 	private LocalDate birthday;
 //	private String password;
 	private Set<BillDTO> bills;
-
+	private boolean billsUnavailable;
 }

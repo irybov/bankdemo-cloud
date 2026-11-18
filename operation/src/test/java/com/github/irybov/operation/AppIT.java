@@ -160,7 +160,7 @@ class AppIT {
 	    
 //	    mockServer.verify();
 //	    mockServer.reset();
-	    wireMockServer.verify(WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI)));
+	    wireMockServer.verify(WireMock.exactly(1), WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test

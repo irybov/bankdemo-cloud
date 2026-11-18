@@ -17,6 +17,7 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <jjwt.version>0.13.0</jjwt.version>
+        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
   </properties>
   
   <dependencies>
@@ -69,9 +70,15 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-       		 		<skip>true</skip>
-                </configuration>
+                   <executions>
+                    <execution>
+                      <id>repackage</id>
+                      <phase>none</phase>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                  </executions>
 			</plugin>
 		    <plugin>
 	            <groupId>org.apache.maven.plugins</groupId>
@@ -91,21 +98,9 @@
                 <artifactId>maven-clean-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>delete-jar-after-install</id>
-                        <phase>verify</phase> 
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
+                        <id>delete-jars</id>
                         <configuration>
-                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
-                            <filesets>
-                                <fileset>
-                                    <directory>${project.build.directory}</directory>
-                                    <includes>
-                                        <include>*.jar</include>
-                                    </includes>
-                                </fileset>
-                            </filesets>
+                            <skip>true</skip>
                         </configuration>
                     </execution>
                 </executions>

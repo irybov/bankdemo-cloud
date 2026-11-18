@@ -70,7 +70,6 @@ services:
       - HEALTHCHECK_IP=127.0.0.1
       - RABBIT_ADDRESSES=rabbitmq:5672
     networks:
-#      - api-net
       - common-net
     healthcheck:
       test: ["CMD", "docker-healthcheck"]
@@ -105,7 +104,6 @@ services:
 #    volumes:
 #      - "/var/lib/rabbitmq"
     networks:
-#      - api-net
       - common-net
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -175,7 +173,6 @@ services:
     env_file:
       - .env
     networks:
-#      - api-net
       - common-net
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://$${ADMIN_USERNAME}:$${ADMIN_PASSWORD}@localhost:8080/actuator/health/readiness"]
@@ -204,7 +201,6 @@ services:
     env_file:
       - .env
     networks:
-#      - api-net
       - common-net
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://$${EUREKA_USERNAME}:$${EUREKA_PASSWORD}@localhost:8761/actuator/health/readiness"]
@@ -280,7 +276,6 @@ services:
     env_file:
       - .env
     networks:
-#      - api-net
       - db-net
       - common-net
     healthcheck:
@@ -348,7 +343,6 @@ services:
     secrets:
       - token_secret
     networks:
-#      - api-net
       - db-net
       - common-net
     healthcheck:
@@ -389,7 +383,6 @@ services:
     env_file:
       - .env
     networks:
-#      - api-net
       - db-net
       - common-net
     healthcheck:

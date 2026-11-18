@@ -124,23 +124,33 @@ public class AccountService {
 		
 		Account account = self.getAccount(phone);
 //		List<BillDTO> bills = billClient.getList(account.getId());
-		Set<BillDTO> bills = self.getList(account.getId());
+//		Set<BillDTO> bills = self.getList(account.getId());
+		BillsResult billsResult = self.getList(account.getId());
 //		ResponseEntity<List<BillDTO>> response = 
 //				restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
 		
 		AccountDTO dto = mapStruct.toDTO(account);
 //		dto.setBills(new HashSet<>(bills));
-		dto.setBills(bills);
+	    dto.setBills(billsResult.bills());
+	    dto.setBillsUnavailable(billsResult.unavailable());
+//		dto.setBills(bills);
 		return dto;
 	}
-	
 
-    @Cacheable(cacheNames = "sets", key = "#owner", sync = true)
-    public Set<BillDTO> getList(int owner) {return self.fetchList(owner);}
+    @Cacheable(cacheNames = "sets", key = "#owner", unless = "#result.unavailable")
+//    public Set<BillDTO> getList(int owner) {return self.fetchList(owner);}
+    public BillsResult getList(int owner) {return self.fetchList(owner);}
     @CircuitBreaker(name = "bill", fallbackMethod = "emptyList")
-    public Set<BillDTO> fetchList(int owner) {return billClient.getList(owner);}
-    private Set<BillDTO> emptyList(int owner, Throwable exception) {return new LinkedHashSet<>();}
+//    public Set<BillDTO> fetchList(int owner) {return billClient.getList(owner);}
+    public BillsResult fetchList(int owner) {return BillsResult.success(billClient.getList(owner));}
+//    private Set<BillDTO> emptyList(int owner, Throwable exception) {return new LinkedHashSet<>();}
+    private BillsResult emptyList(int owner, Throwable exception) {
+//        if (exception instanceof ResponseStatusException ex && ex.getStatusCode().is4xxClientError()) {
+//            throw ex;
+//        }
+        return BillsResult.fallback();
+    }
 	
 	@Transactional(readOnly = true, noRollbackFor = Exception.class)
 	public List<AccountDTO> getAll() {return mapStruct.toList(Streamable.of(jdbc.findAll()).toList());}

@@ -75,10 +75,10 @@
                             <image>bellsoft/liberica-runtime-container:jre-25-slim-glibc</image>
                         </from>
                         <to>
-                            <image>bankdemo-cloud/${project.artifactId}</image>
-                            <tags>
+                            <image>bankdemo-cloud/${project.artifactId}:${project.version}</image>
+<!--                            <tags>
                                 <tag>${project.version}</tag>
-                            </tags>
+                            </tags>-->
                         </to>
                         <container>
                             <workingDirectory>/app</workingDirectory>
@@ -137,6 +137,30 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>delete-jars</id>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>*.jar</include>
+                                        <include>*.jar.original</include>
+                                    </includes>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 		</plugins>
 	</build>
 
