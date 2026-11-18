@@ -122,8 +122,7 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 		try {
 			Jws<Claims> parsedToken = parser.parseSignedClaims(jwt);
 //			List<Map<String, String>> scopes = ((Claims) parsedToken.getPayload()).get("scope", List.class);
-			Collection<String> scopes = 
-					((Claims) parsedToken.getPayload()).get("scope", Collection.class);
+			Collection<String> scopes = ((Claims) parsedToken.getPayload()).get("scope", Collection.class);
 //			scopes.stream().map(scopeMap -> returnValue.add(scopeMap.get("authority"))).collect(Collectors.toList());
 			scopes.forEach(scope -> returnValue.add(scope));
 		}

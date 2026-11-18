@@ -81,6 +81,7 @@ public class AccountServiceTest {
 		MockitoAnnotations.openMocks(this);
 		service = new AccountService(env, billClient, mapStruct, jdbc);
 		ReflectionTestUtils.setField(service, "self", self);
+		ReflectionTestUtils.setField(service, "secretFile", "src/test/resources/token_secret.txt");
 		
 		account = new Account();
 		account.setId(0);
@@ -127,7 +128,7 @@ public class AccountServiceTest {
 	@Test
 	void can_generate_token() {
 		
-		when(env.getProperty("token.secret")).thenReturn("rAUOQK5LF3s0unfY8jbOkJc8Ep9H9v3Y");
+//		when(env.getProperty("token.secret")).thenReturn("1jqjnzVw3RKoCFhldHn19GoODxI758LxTkNeBBeXxYw=");
 		when(env.getProperty("token.lifetime")).thenReturn("300");
 //		when(jdbc.findByPhone(anyString())).thenReturn(account);
 		when(self.getAccount(anyString())).thenReturn(account);
@@ -137,7 +138,7 @@ public class AccountServiceTest {
 		
 //		verify(jdbc).findByPhone(anyString());
 		verify(self).getAccount(anyString());
-		verify(env).getProperty("token.secret");
+//		verify(env).getProperty("token.secret");
 		verify(env).getProperty("token.lifetime");
 	}
 	

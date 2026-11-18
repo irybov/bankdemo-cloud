@@ -56,6 +56,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -94,6 +95,7 @@ import io.jsonwebtoken.security.Keys;
 @AutoConfigureWebTestClient
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 public class AppIT {
 	
     @Autowired
@@ -160,9 +162,9 @@ public class AppIT {
 		populator.addScripts(new ClassPathResource("test-accounts-h2.sql"));
 		populator.execute(dataSource);
 //		mockServer = MockRestServiceServer.createServer(restTemplate);
-		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
+		wireMockServer = new WireMockServer(new WireMockConfiguration().bindAddress("localhost").port(8761));
 		wireMockServer.start();
-		WireMock.configureFor("localhost", 8761);
+//		WireMock.configureFor("localhost", 8761);
 	}
 	
 	@Test
@@ -287,8 +289,7 @@ public class AppIT {
                 .build();
 		Jws<Claims> parsedToken = 
 				parser.parseSignedClaims(jwt);
-		Collection<String> scopes = 
-				((Claims) parsedToken.getPayload()).get("scope", Collection.class);
+		Collection<String> scopes = ((Claims) parsedToken.getPayload()).get("scope", Collection.class);
 		
 		assertThat(scopes.size(), is(2));
 	}
@@ -438,7 +439,12 @@ public class AppIT {
 	}
 	
 	@Test
-	void can_work_on_fault() {
+	void can_work_on_error() {
+		
+		String requestURI = "/bills/3/list";
+		wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
+		        .willReturn(WireMock.aResponse()
+		        .withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())));
 /*		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Login", "1111111111:supervixen");
@@ -452,7 +458,7 @@ public class AppIT {
 		entity = new HttpEntity<>(headers);
 */		
 		AccountDTO response = webTestClient.get()
-		.uri("/accounts/1111111111")
+		.uri("/accounts/2222222222")
 		.exchange()
 		.expectStatus().isOk()
 		.returnResult(AccountDTO.class)
@@ -463,13 +469,44 @@ public class AppIT {
 		// assertThat(response.getStatusCode(), is(HttpStatus.OK));
 	    assertThat(response.getUpdatedAt(), nullValue());
 	    assertThat(response.getBirthday(), notNullValue(LocalDate.class));
-	    assertThat(response.getName(), is("Kae"));
-	    assertThat(response.getSurname(), is("Yukawa"));
-	    assertThat(response.getPhone(), is("1111111111"));
-	    assertThat(response.getEmail(), is("yukawa@greenmail.io"));
+	    assertThat(response.getName(), is("Hannah"));
+	    assertThat(response.getSurname(), is("Waddingham"));
+	    assertThat(response.getPhone(), is("2222222222"));
+	    assertThat(response.getEmail(), is("waddingham@greenmail.io"));
 	    assertThat(response.getBills(), notNullValue());
 	    assertThat(response.getBills().isEmpty(), is(true));
 	    assertThat(response.isActive(), is(true));
+	    
+	    wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
+	}
+
+	@Test
+	void can_work_on_fault() {
+		
+		String requestURI = "/bills/3/list";
+		wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(requestURI))
+		        .willReturn(WireMock.aResponse()
+		        .withStatus(HttpStatus.BAD_REQUEST.value())));
+		
+		AccountDTO response = webTestClient.get()
+		.uri("/accounts/2222222222")
+		.exchange()
+		.expectStatus().isOk()
+		.returnResult(AccountDTO.class)
+		.getResponseBody()
+		.blockFirst();
+
+	    assertThat(response.getUpdatedAt(), nullValue());
+	    assertThat(response.getBirthday(), notNullValue(LocalDate.class));
+	    assertThat(response.getName(), is("Hannah"));
+	    assertThat(response.getSurname(), is("Waddingham"));
+	    assertThat(response.getPhone(), is("2222222222"));
+	    assertThat(response.getEmail(), is("waddingham@greenmail.io"));
+	    assertThat(response.getBills(), notNullValue());
+	    assertThat(response.getBills().isEmpty(), is(true));
+	    assertThat(response.isActive(), is(true));
+	    
+	    wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test

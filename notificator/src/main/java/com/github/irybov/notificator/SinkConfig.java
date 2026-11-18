@@ -24,7 +24,7 @@ public class SinkConfig {
 	
     private final RestClient restClient;
     private final ObjectMapper mapper;
-    public SinkConfig(RestClient.Builder builder, ObjectMapper mapper, @Value("${external.service}") String externalUrl) {
+    public SinkConfig(RestClient.Builder builder, ObjectMapper mapper, @Value("${external.service.url}") String externalUrl) {
     	this.restClient = builder.baseUrl(externalUrl).build();
     	this.mapper = mapper;
     }

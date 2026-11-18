@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +35,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 // import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.env.Environment;
@@ -42,6 +45,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -58,11 +62,15 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import io.jsonwebtoken.Jwts;
 // import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = {
 	    "TOKEN_SECRET_FILE=src/test/resources/token_secret.txt"
 	})
 @AutoConfigureWebTestClient
+@TestInstance(Lifecycle.PER_CLASS)
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 public class AppIT {
 	
 	@Value("${server.address}")
@@ -79,14 +87,34 @@ public class AppIT {
 	private Environment env;
 	
 	@Value("${app.internal-url}")
-	private static String internalURL;
-	private static WireMockServer wireMockServer;
+	private String internalURL;
+	private WireMockServer wireMockServer;
 	
 	@BeforeAll
-	static void prepare() {
-		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
+	void prepare() {
+//		wireMockServer = new WireMockServer(new WireMockConfiguration().bindAddress(uri).port(8761));
+		wireMockServer = new WireMockServer(WireMockConfiguration.options().bindAddress(uri).port(8761));
 		wireMockServer.start();
 		WireMock.configureFor(internalURL, 8761);
+	}
+	
+	@Test
+	void print_routes(@Autowired RouteLocator routeLocator) {
+	    routeLocator.getRoutes()
+        .doOnNext(route ->
+            System.out.println(route.getId() + " → " + route.getUri()))
+        .blockLast();
+	}
+	
+	@Test
+	void can_reach_wiremock_directly() {
+	    HttpClient.create()
+	        .headers(h -> h.set("Content-Type", "application/json"))
+	        .post()
+	        .uri("http://localhost:8761/accounts")
+	        .send((req, out) -> out.sendString(Mono.just("{}")))
+	        .responseSingle((res, body) -> Mono.just(res.status()))
+	        .block();
 	}
 	
 	private String generateJWT(Set<String> scopes, String phone, boolean active) {
@@ -791,6 +819,6 @@ public class AppIT {
 	}
  */	
 	@AfterAll
-	static void clear() {wireMockServer.stop();}
+	void clear() {wireMockServer.stop();}
 	
 }

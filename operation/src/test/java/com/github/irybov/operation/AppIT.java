@@ -42,6 +42,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -60,6 +61,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 @Transactional
 @TestInstance(Lifecycle.PER_CLASS)
 //@AutoConfigureWireMock(port = 8888)
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 class AppIT {
 /*	
 	@Autowired

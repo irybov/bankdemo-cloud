@@ -244,6 +244,7 @@ services:
       TOKEN_LIFETIME: "300"
       TOKEN_SECRET_FILE: "/run/secrets/token_secret"
 #      ADMIN_SECRET_FILE: "/run/secrets/admin_secret"
+      EXTERNAL_SERVICE_URL: "http://host.docker.internal:4567"
     env_file:
       - .env
     secrets:
@@ -252,6 +253,8 @@ services:
       db-net:
       common-net:
       api-net:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   operation:
     build:
@@ -306,6 +309,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "notificator"
+      GATEWAY_URL: "http://gateway:8080"
     env_file:
       - .env
     networks:

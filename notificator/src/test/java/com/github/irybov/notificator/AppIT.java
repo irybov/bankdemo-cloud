@@ -44,6 +44,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.testcontainers.rabbitmq.RabbitMQContainer;
@@ -57,6 +58,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @TestInstance(Lifecycle.PER_CLASS)
 @Import(MyInterceptor.class)
 //@AutoConfigureMockRestServiceServer
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 public class AppIT {
 
 	@Container
@@ -78,7 +80,7 @@ public class AppIT {
     private String DLQ;
     @Value("${spring.cloud.stream.rabbit.bindings.input-in-0.consumer.binding-routing-key}")
     private String KEY;
-    @Value("${external.service}")
+    @Value("${external.service.url}")
     private String externalUrl;
 
     @Autowired

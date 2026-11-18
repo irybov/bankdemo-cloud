@@ -22,12 +22,12 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 public interface BillClient {
 
 	@GetMapping("/{owner}/list")
-	@CircuitBreaker(name = "bill", fallbackMethod = "emptyList")
-	@Cacheable(cacheNames = "sets", key = "#owner", sync = true)
+//	@CircuitBreaker(name = "bill", fallbackMethod = "emptyList")
+//	@Cacheable(cacheNames = "sets", key = "#owner", sync = true)
 //	public List<BillDTO> getList(@PathVariable int owner);
 	public Set<BillDTO> getList(@PathVariable int owner);
 //	default List<BillDTO> emptyList(Throwable exception) {return new ArrayList<>();}
-	default Set<BillDTO> emptyList(Throwable exception) {return new LinkedHashSet<>();}
+//	default Set<BillDTO> emptyList(int owner, Throwable exception) {return new LinkedHashSet<>();}
 	
 	@PostMapping
 	public BillDTO create(@RequestParam String currency, @RequestParam int owner);

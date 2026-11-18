@@ -23,12 +23,10 @@ public class FeignExceptionHandler implements ErrorDecoder {
 
     private String readMessage(Response response) {
 
+        if (response.body() == null) return "";
         try(Reader reader = response.body().asReader(Charset.defaultCharset());) {
             return new BufferedReader(reader).lines().collect(Collectors.joining("\n"));
         }
-        catch (IOException e) {
-            e.printStackTrace();
-            return e.getMessage();
-        }
+        catch (IOException e) {return e.getMessage();}
     }
 }

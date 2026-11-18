@@ -16,6 +16,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.annotation.Validated;
@@ -168,8 +169,13 @@ public class AccountController {
     }
     
     @ExceptionHandler(ResponseStatusException.class)
-    protected ResponseEntity<String> handleSearchingException(ResponseStatusException e) {
-    	return new ResponseEntity<String>(e.getReason(), e.getStatusCode());
+    protected ResponseEntity<ProblemDetail> handleSearchingException(ResponseStatusException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                e.getStatusCode(),
+                e.getReason() != null ? e.getReason() : "Unexpected error"
+        );
+        return ResponseEntity.status(e.getStatusCode()).body(problem);
+//    	return new ResponseEntity<String>(e.getReason(), e.getStatusCode());
     }
     
 }

@@ -10,6 +10,7 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -44,6 +45,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.github.irybov.shared.AccountDTO;
 import com.github.irybov.shared.BillDTO;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtParser;
@@ -98,16 +100,15 @@ public class AccountService {
 		Account account = self.getAccount(login[0]);
 		if(account.getPassword().equals(login[1])) {
 //			SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
-			SecretKey key = new SecretKeySpec(secret.getBytes(), SignatureAlgorithm.HS256.getJcaName());
-//			SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
+//			SecretKey key = new SecretKeySpec(secret.getBytes(), SignatureAlgorithm.HS256.getJcaName());
+			SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
 			Instant now = Instant.now();
 			String token = Jwts.builder()
 					.claim("scope", account.getRoles())
 					.claim("active", account.isActive())
 					.subject(account.getPhone())
 					.issuer("bankdemo")
-					.expiration(Date.from(now.plusSeconds(
-							Integer.parseInt(env.getProperty("token.lifetime")))))
+					.expiration(Date.from(now.plusSeconds(Integer.parseInt(env.getProperty("token.lifetime")))))
 					.issuedAt(Date.from(now))
 					.signWith(key, Jwts.SIG.HS256)
 					.compact();
@@ -123,7 +124,7 @@ public class AccountService {
 		
 		Account account = self.getAccount(phone);
 //		List<BillDTO> bills = billClient.getList(account.getId());
-		Set<BillDTO> bills = billClient.getList(account.getId());
+		Set<BillDTO> bills = self.getList(account.getId());
 //		ResponseEntity<List<BillDTO>> response = 
 //				restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
@@ -134,10 +135,15 @@ public class AccountService {
 		return dto;
 	}
 	
+
+    @Cacheable(cacheNames = "sets", key = "#owner", sync = true)
+    public Set<BillDTO> getList(int owner) {return self.fetchList(owner);}
+    @CircuitBreaker(name = "bill", fallbackMethod = "emptyList")
+    public Set<BillDTO> fetchList(int owner) {return billClient.getList(owner);}
+    private Set<BillDTO> emptyList(int owner, Throwable exception) {return new LinkedHashSet<>();}
+	
 	@Transactional(readOnly = true, noRollbackFor = Exception.class)
-	public List<AccountDTO> getAll() {
-		return mapStruct.toList(Streamable.of(jdbc.findAll()).toList());
-	}
+	public List<AccountDTO> getAll() {return mapStruct.toList(Streamable.of(jdbc.findAll()).toList());}
 	
 	@Transactional
 	public void changePassword(String phone, String password) {

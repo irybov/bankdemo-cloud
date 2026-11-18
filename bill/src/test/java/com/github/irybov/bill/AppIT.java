@@ -52,6 +52,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.messaging.Message;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -80,6 +81,7 @@ import com.hazelcast.spring.cache.HazelcastCacheManager;
 @EnableTestBinder
 @TestInstance(Lifecycle.PER_CLASS)
 //@Import(TestSupportBinderConfiguration.class)
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 public class AppIT {
 	
 	@Autowired
