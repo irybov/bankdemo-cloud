@@ -157,8 +157,8 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 				parser.parseSignedClaims(jwt);		
 		String owner = parsedToken.getPayload().getSubject();
 		
-		if(owner.equals(phone)) return false;
-		return true;
+		if(!owner.equals(phone)) return true;
+		return false;
 	}
 	
 }

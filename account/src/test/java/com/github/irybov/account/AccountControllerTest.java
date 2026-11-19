@@ -2,10 +2,12 @@ package com.github.irybov.account;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.CoreMatchers.hasItem;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -136,6 +138,8 @@ public class AccountControllerTest {
 		.andExpect(jsonPath("$", hasItem("Email address should be 10-60 symbols length")))
 		.andExpect(jsonPath("$", hasItem("Birthday can't be future time")))
 		.andExpect(jsonPath("$", hasItem("Password should be 10-60 symbols length")));
+		
+		verify(service, never()).create(any(Registration.class));
 	}
 	
 	@Test
@@ -158,11 +162,11 @@ public class AccountControllerTest {
 		.header("Login", "00000:super"))
 		.andExpect(result -> assertThat
 				(result.getResolvedException() instanceof ConstraintViolationException).isTrue())
+		.andExpect(header().string("Error-Message", "Header should match pattern"))
 		.andExpect(status().isBadRequest())
-		.andExpect(content().contentType(MediaType.APPLICATION_JSON));
-//		.andExpect(jsonPath("$").isArray())
-//		.andExpect(jsonPath("$.length()").value(1))
-//		.andExpect(jsonPath("$", hasItem("Header should match pattern")));
+		.andExpect(content().string(""));
+		
+		verify(service, never()).generateToken(anyString());
 	}
 	
 	@Test
@@ -175,7 +179,9 @@ public class AccountControllerTest {
 		.header("Login", "0000000000:superclown"))
 		.andExpect(result -> assertThat
 				(result.getResolvedException() instanceof ResponseStatusException).isTrue())
-		.andExpect(status().isUnauthorized());
+		.andExpect(header().string("Error-Message", "Wrong password provided"))
+		.andExpect(status().isUnauthorized())
+		.andExpect(content().string(""));
 //		.andExpect(content().string("Wrong password provided"));
 		
 		verify(service).generateToken(anyString());
@@ -227,7 +233,16 @@ public class AccountControllerTest {
 		.andExpect(result -> assertThat
 				(result.getResolvedException() instanceof ResponseStatusException).isTrue())
 		.andExpect(status().isNotFound())
-		.andExpect(content().string("Account with phone 0000000000 not found"));
+		.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+//		.andExpect(content().string("Account with phone 0000000000 not found"));
+		.andExpect(content().json("""
+			    {
+		        "detail": "Account with phone 0000000000 not found",
+		        "instance": "/accounts/0000000000",
+		        "status": 404,
+		        "title": "Not Found"
+		    }
+		    """));
 		
 		verify(service).getOne(anyString());
 	}

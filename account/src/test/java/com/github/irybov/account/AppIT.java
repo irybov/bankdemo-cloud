@@ -184,7 +184,6 @@ public class AppIT {
 		wireMockServer.start();
 //		WireMock.configureFor("localhost", 8761);
 	}
-	
 	@BeforeEach
 	void setup() {wireMockServer.resetRequests();}
 	
@@ -233,7 +232,7 @@ public class AppIT {
 
 		webTestClient.post()
 		.uri("/accounts")
-		.contentType(MediaType.APPLICATION_JSON)
+//		.contentType(MediaType.APPLICATION_JSON)
 		.bodyValue(registration)
 		.exchange()
 		.expectStatus().isCreated()
@@ -318,17 +317,15 @@ public class AppIT {
 	@Test
 	void try_bad_login() {
 		
-		HttpHeaders headers = new HttpHeaders();
-		headers.set("Login", "333333:ginger");
 		// HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
-
 		webTestClient.head()
         .uri("/accounts")
-		.headers(h -> h.addAll(headers))
+        .header("Login", "00000:super")
         .exchange()
 		.expectStatus().isBadRequest()
-		.expectHeader().doesNotExist("Token")
-		.expectBody(new ParameterizedTypeReference<List<String>>(){});
+        .expectHeader().valueEquals("Error-Message", "Header should match pattern")
+        .expectBody().isEmpty();
+		
 		// .consumeWith(response -> {
 		// 	List<String> list = response.getResponseBody();
 		// 	assertThat(list.size(), is(1));
@@ -346,16 +343,14 @@ public class AppIT {
 	@Test
 	void try_wrong_password() {
 		
-		HttpHeaders headers = new HttpHeaders();
-		headers.set("Login", "3333333333:gingerfreak");
 		// HttpEntity<HttpHeaders> entity = new HttpEntity<>(headers);
-
 		webTestClient.head()
         .uri("/accounts")
-		.headers(h -> h.addAll(headers))
+        .header("Login", "3333333333:gingerfreak")
         .exchange()
 		.expectStatus().isUnauthorized()
-		.expectHeader().doesNotExist("Token");
+        .expectHeader().valueEquals("Error-Message", "Wrong password provided")
+        .expectBody().isEmpty();
 		// .expectBody(String.class)
 		// .isEqualTo("Wrong password provided");
 		// ResponseEntity<String> response = 
@@ -405,6 +400,7 @@ public class AppIT {
 		.uri("/accounts/1111111111")
 		.exchange()
 		.expectStatus().isOk()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON)
 		.returnResult(AccountDTO.class)
 		.getResponseBody()
 		.blockFirst();
@@ -437,6 +433,7 @@ public class AppIT {
 		.uri("/accounts/5555555555")
 		.exchange()
 		.expectStatus().isNotFound()
+		.expectHeader().contentType(MediaType.APPLICATION_PROBLEM_JSON)
 		.expectBody(String.class)
 		.value(body -> {
 			assertTrue(body.contains("Account with phone 5555555555 not found"));
@@ -473,6 +470,7 @@ public class AppIT {
 			    .uri("/accounts/2222222222")
 			    .exchange()
 			    .expectStatus().isOk()
+			    .expectHeader().contentType(MediaType.APPLICATION_JSON)
 			    .expectBody(AccountDTO.class)
 			    .returnResult()
 			    .getResponseBody();
@@ -508,6 +506,7 @@ public class AppIT {
 			    .uri("/accounts/2222222222")
 			    .exchange()
 			    .expectStatus().isOk()
+			    .expectHeader().contentType(MediaType.APPLICATION_JSON)
 			    .expectBody(AccountDTO.class)
 			    .returnResult()
 			    .getResponseBody();
@@ -548,6 +547,7 @@ public class AppIT {
 		.uri("/accounts/1111111111")
 		.exchange()
 		.expectStatus().isOk()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON)
 		.returnResult(AccountDTO.class)
 		.getResponseBody()
 		.blockFirst();
@@ -581,6 +581,7 @@ public class AppIT {
 		.uri("/accounts")
 		.exchange()
 		.expectStatus().isOk()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON)
 		.expectBody(new ParameterizedTypeReference<Set<AccountDTO>>(){})
 		.value(itemSet -> {assertThat(itemSet).hasSize(5);});
 		// ResponseEntity<List<AccountDTO>> response = 
@@ -618,6 +619,7 @@ public class AppIT {
 		.uri(uriBuilder.toUriString())
 		.exchange()
 		.expectStatus().isBadRequest()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON)
 		.expectBody(new ParameterizedTypeReference<List<String>>(){})
 		.consumeWith(response -> {
 			List<String> list = response.getResponseBody();
@@ -678,6 +680,7 @@ public class AppIT {
 		.uri(uriBuilder.toUriString())
 		.exchange()
 		.expectStatus().isCreated()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON)
 		.returnResult(BillDTO.class)
 		.getResponseBody()
 		.blockFirst();
@@ -702,6 +705,7 @@ public class AppIT {
 		.uri(uriBuilder.toUriString())
 		.exchange()
 		.expectStatus().isBadRequest()
+		.expectHeader().contentType(MediaType.APPLICATION_JSON)
 		.expectBody(new ParameterizedTypeReference<List<String>>(){})
 		.consumeWith(response -> {
 			List<String> list = response.getResponseBody();

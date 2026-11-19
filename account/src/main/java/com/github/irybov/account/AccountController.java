@@ -43,6 +43,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -63,24 +64,47 @@ public class AccountController {
 	@Operation(description = "Registers new account")
 	@ApiResponses(value = {
 		@ApiResponse(responseCode = "201"), 
-		@ApiResponse(responseCode = "404", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
+		@ApiResponse(
+				responseCode = "404", 
+				content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
 	})
 	@PostMapping()
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(@Valid @RequestBody Registration registration) {service.create(registration);}
 	
-	@Operation(description = "Returns JWT")
+	@Operation(description = "Authenticates user and returns token in response header")
 	@ApiResponses(value = {
-		@ApiResponse(responseCode = "200", headers = @Header(
-			name = "Token", 
-			description = "Security token", 
-			schema = @Schema(type = "string")
-		)), 
-		@ApiResponse(responseCode = "400"), 
-		@ApiResponse(responseCode = "404")
+		@ApiResponse(
+				responseCode = "200",
+				headers = @Header(
+					name = "Token", 
+					description = "Generated authentication token", 
+					schema = @Schema(type = "string")
+				)
+			), 
+	    @ApiResponse(
+	            responseCode = "400",
+	            description = "Invalid Login header format",
+	            headers = @Header(
+	                name = "Error-Message",
+	                description = "Validation error details",
+	                schema = @Schema(type = "string", example = "Header should match pattern")
+	            )
+	        ), 
+	        @ApiResponse(
+	            responseCode = "404",
+	            description = "Account not found",
+	            headers = @Header(
+	                name = "Error-Message",
+	                description = "Failure reason",
+	                schema = @Schema(type = "string", example = "User not found")
+	            )
+	        )
 	})
 	@RequestMapping(method = RequestMethod.HEAD)
-	public void getToken(@Pattern(regexp = "\\d{10}[:]{1}.{10,60}", message = "Header should match pattern") 
+	public void getToken(
+	        @Parameter(description = "10-digit ID followed by colon and password", example = "1234567890:mySecretPass123")
+			@Pattern(regexp = "\\d{10}[:].{10,60}", message = "Header should match pattern") 
 			@RequestHeader(name = "Login") String header, HttpServletResponse res) {
 		String token = service.generateToken(header);
 		res.addHeader("Token", token);
@@ -95,45 +119,53 @@ public class AccountController {
 		@ApiResponse(responseCode = "404")
 	})
 	@GetMapping("/{phone}")
-	public AccountDTO getOne(@PathVariable String phone) {return service.getOne(phone);} 
+	public AccountDTO getOne(
+			@Parameter(description = "10-digit account phone number", example = "1234567890")
+			@Pattern(regexp = "^\\d{10}$", message = "Phone number should be 10-digit")
+			@PathVariable String phone) {
+		return service.getOne(phone);
 //			@RequestHeader(name = HttpHeaders.AUTHORIZATION) String header) {
 //		if(service.checkFraud(phone, header)) {return service.getOne(phone);}
 //		else {throw new SecurityException();}
-//	}
+	}
 
 	@Operation(description = "Gets list of accounts")
-	@ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = AccountDTO.class))))
+	@ApiResponse(responseCode = "200", 
+		content = @Content(array = @ArraySchema(schema = @Schema(implementation = AccountDTO.class))))
 	@GetMapping
 	public List<AccountDTO> getAll() {return service.getAll();}
 	
 	@Operation(description = "Changes account's password")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200"), 
-			@ApiResponse(responseCode = "400", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
-	})
-	@Parameters({	
-		@Parameter(name = "phone", description = "Phone number must not be blank", required = true, schema = @Schema(type = "string", format = "^\\d{10}$")), 
-		@Parameter(name = "password", description = "Password should be 10-60 symbols length", required = true, schema = @Schema(type = "string"))
+			@ApiResponse(responseCode = "400", 
+				content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
 	})
 	@PatchMapping("/{phone}")
-	public void changePassword(@PathVariable String phone, 
-			@NotBlank(message = "Password must not be blank") 
-			@Size(min=10, max=60, message = "Password should be 10-60 symbols length") 
+	public void changePassword(
+			@Parameter(description = "10-digit account phone number", example = "1234567890")
+			@Pattern(regexp = "^\\d{10}$", message = "Phone number should be 10-digit")
+			@PathVariable String phone, 
+			@NotBlank(message = "Password must not be blank")
+			@Size(min=10, max=60, message = "Password should be 10-60 symbols length")
+			@Parameter(description = "10-60 symbols length password", schema = @Schema(format = "password"))
 			@RequestParam String password) {
 		service.changePassword(phone, password);
 	}
 	
 	@Operation(description = "Adds new bill to account")
 	@ApiResponses(value = {
-		@ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = BillDTO.class))), 
-		@ApiResponse(responseCode = "400", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))})
-	@Parameters({	
-		@Parameter(name = "currency", description = "Currency should be 3 capital letters", required = true, schema = @Schema(type = "string", format = "^[A-Z]{3}$")), 
-		@Parameter(name = "phone", description = "Phone number must not be blank", required = true, schema = @Schema(type = "string", format = "^\\d{10}$"))
-	})
+		@ApiResponse(responseCode = "201", 
+			content = @Content(schema = @Schema(implementation = BillDTO.class))), 
+		@ApiResponse(responseCode = "400", 
+			content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))})
 	@PostMapping("/{phone}/bills")
 	@ResponseStatus(HttpStatus.CREATED)
-	public BillDTO addBill(@PathVariable String phone, 
+	public BillDTO addBill(
+			@Parameter(description = "10-digit account phone number", example = "1234567890")
+			@Pattern(regexp = "^\\d{10}$", message = "Phone number should be 10-digit") 
+			@PathVariable String phone, 
+			@Parameter(description = "Currency international ID code", example = "SEA")
 			@Pattern(regexp = "^[A-Z]{3}$", message = "Currency should be 3 capital letters") 
 			@RequestParam String currency) {
 		return service.addBill(phone, currency);
@@ -146,7 +178,12 @@ public class AccountController {
 	@ApiResponse(responseCode = "204")
 	@DeleteMapping("/{phone}/bills/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void deleteBill(@PathVariable String phone, @PathVariable Integer id) {
+	public void deleteBill(
+			@Parameter(description = "10-digit account phone number", example = "1234567890")
+			@Pattern(regexp = "^\\d{10}$", message = "Phone number should be 10 digits") 
+	        @PathVariable String phone,
+	        @Parameter(description = "ID of the bill to delete", example = "42")
+	        @PathVariable Integer id) {
 		service.deleteBill(phone, id);
 	}
 	
@@ -158,24 +195,55 @@ public class AccountController {
 	    }
         return ResponseEntity.badRequest().body(errors);
     }
-	
+//    @ExceptionHandler(ConstraintViolationException.class)
+//    protected ResponseEntity<List<String>> handleValidationException(ConstraintViolationException e) {
+//	    List<String> violations = new ArrayList<String>();
+//	    for(ConstraintViolation<?> violation : e.getConstraintViolations()) {
+//	    	violations.add(violation.getMessage());
+//	    }
+//        return ResponseEntity.badRequest().body(violations);
+//    }
+//    @ExceptionHandler(ResponseStatusException.class)
+//    protected ResponseEntity<ProblemDetail> handleSearchingException(ResponseStatusException e) {
+//        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+//                e.getStatusCode(),
+//                e.getReason() != null ? e.getReason() : "Unexpected error"
+//        );
+//        return ResponseEntity.status(e.getStatusCode()).body(problem);
+//    }
     @ExceptionHandler(ConstraintViolationException.class)
-    protected ResponseEntity<List<String>> handleValidationException(ConstraintViolationException e) {
-	    List<String> violations = new ArrayList<String>();
-	    for(ConstraintViolation<?> violation : e.getConstraintViolations()) {
-	    	violations.add(violation.getMessage());
-	    }
+    protected ResponseEntity<List<String>> handleValidationException(ConstraintViolationException e, HttpServletRequest request) {
+        
+        List<String> violations = e.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .toList();
+
+//        ResponseEntity.BodyBuilder builder = ResponseEntity.badRequest();
+        if ("HEAD".equalsIgnoreCase(request.getMethod())) {
+            String headerMsg = String.join("; ", violations).replaceAll("[\\r\\n]", " ");
+//            builder.header("Error-Message", headerMsg);
+            return ResponseEntity.badRequest()
+                    .header("Error-Message", headerMsg)
+                    .build();
+        }
+//        return builder.body(violations);
         return ResponseEntity.badRequest().body(violations);
     }
-    
     @ExceptionHandler(ResponseStatusException.class)
-    protected ResponseEntity<ProblemDetail> handleSearchingException(ResponseStatusException e) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                e.getStatusCode(),
-                e.getReason() != null ? e.getReason() : "Unexpected error"
-        );
+    protected ResponseEntity<ProblemDetail> handleSearchingException(ResponseStatusException e, HttpServletRequest request) {
+        
+        String detail = e.getReason() != null ? e.getReason() : "Unexpected error";
+
+//        ResponseEntity.BodyBuilder builder = ResponseEntity.status(e.getStatusCode());
+        if ("HEAD".equalsIgnoreCase(request.getMethod())) {
+//            builder.header("Error-Message", detail.replaceAll("[\\r\\n]", " "));
+            return ResponseEntity.status(e.getStatusCode())
+                    .header("Error-Message", detail.replaceAll("[\\r\\n]", " "))
+                    .build();
+        }
+//        return builder.body(problem);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(e.getStatusCode(), detail);
         return ResponseEntity.status(e.getStatusCode()).body(problem);
-//    	return new ResponseEntity<String>(e.getReason(), e.getStatusCode());
     }
     
 }
