@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.annotation.Validated;
@@ -55,60 +56,77 @@ public class BillController {
 	private final BillService service;
 	
 	@Operation(description = "Creates new bill")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = BillDTO.class))), 
-			@ApiResponse(responseCode = "400", content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
-		})
-	@Parameters({	
-		@Parameter(name = "currency", description = "Currency should be 3 capital letters", required = true, schema = @Schema(type = "string", format = "^[A-Z]{3}$")), 
-		@Parameter(name = "owner", description = "Owner's id should be positive", required = true, schema = @Schema(type = "integer"))
-	})
+	@ApiResponse(content = @Content(schema = @Schema(implementation = BillDTO.class)))
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public BillDTO create(
-			@RequestParam @Pattern(regexp = "^[A-Z]{3}$", message = "Currency should be 3 capital letters") 
-			String currency, 
-			@RequestParam @Positive(message = "Owner's id should be positive")
-			int owner) {
+			@Parameter(description = "Currency international ID code", example = "SEA")
+			@Pattern(regexp = "^[A-Z]{3}$", message = "Currency should be 3 capital letters")
+			@RequestParam String currency, 
+			@Positive(message = "Owner's id should be positive")
+			@Parameter(description = "ID of the account to add new bill", example = "42")
+			@RequestParam int owner) {
 		return service.create(currency, owner);
 	}
-	@Operation(description = "Gets one bill")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BillDTO.class))), 
-			@ApiResponse(responseCode = "404")})
+	
+	@Operation(description = "Fetches one bill")
+	@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BillDTO.class)))
 	@GetMapping("/{id}")
-	public BillDTO getOne(@PathVariable int id) {return service.getOne(id);}
+	public BillDTO getOne(
+			@Parameter(description = "ID of the bill to fetch", example = "42")
+			@PathVariable int id) {
+		return service.getOne(id);
+	}
 	
 	@Operation(description = "Gets list of bills")
-//	@ApiResponse(code = 200, message = "", responseContainer = "List", response = BillDTO.class)
-	@ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = BillDTO.class))))
+	@ApiResponse(responseCode = "200", 
+		content = @Content(array = @ArraySchema(schema = @Schema(implementation = BillDTO.class))))
 	@GetMapping("/{owner}/list")
 //	public List<BillDTO> getList(@PathVariable int owner) {return service.getList(owner);}
-	public Set<BillDTO> getList(@PathVariable int owner) {return service.getList(owner);}
+	public Set<BillDTO> getList(
+			@Parameter(description = "ID of the account to get bills", example = "42")
+			@PathVariable int owner) {
+		return service.getList(owner);
+	}
 	
 	@Operation(description = "Changes bill's status")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Boolean.class))), 
-			@ApiResponse(responseCode = "404")})
+	@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Boolean.class))) 
 	@PatchMapping("/{id}/status")
-	public boolean changeStatus(@PathVariable int id) {return service.changeStatus(id);}
+	public boolean changeStatus(
+	        @Parameter(description = "ID of the bill to delete", example = "42")
+	        @PathVariable int id) {
+		return service.changeStatus(id);
+	}
 	
 	@Operation(description = "Updates bill's balance")
-	@ApiResponse(responseCode = "201")
 	@PatchMapping
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void updateBalance(@RequestBody Map<Integer, Double> data) {service.updateBalance(data);}
+	public void updateBalance(
+	        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+	                description = "Map of bill IDs to balance delta/amount",
+	                content = @Content(
+	                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+	                    schema = @Schema(
+	                        example = "{\"101\": 250.50, \"102\": -40.00}"
+	                    )
+	                )
+	            )
+			@RequestBody Map<Integer, Double> data) {
+		service.updateBalance(data);
+	}
 	
 	@Operation(description = "Deletes existing bill")
-	@ApiResponse(responseCode = "204")
 	@DeleteMapping("/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void delete(@PathVariable int id) {service.delete(id);}
+	public void delete(
+			@Parameter(description = "ID of the bill to delete", example = "42")
+			@PathVariable int id) {
+		service.delete(id);
+	}
 	
 	@ResponseStatus(code = HttpStatus.NOT_FOUND)
     @ExceptionHandler(value = {NoSuchElementException.class, EmptyResultDataAccessException.class})
     protected void handleSearchingException(RuntimeException e) {}
-    
     @ExceptionHandler(HandlerMethodValidationException.class)
 	protected ResponseEntity<List<String>> handleMethodValidationException(HandlerMethodValidationException exc) {
 		List<String> errors = exc.getParameterValidationResults()
@@ -119,7 +137,6 @@ public class BillController {
 			.collect(Collectors.toList());
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
 	}
-    
 	@ExceptionHandler(ConstraintViolationException.class)
     protected ResponseEntity<List<String>> handleValidationException(ConstraintViolationException e) {
 	    List<String> violations = new ArrayList<String>();

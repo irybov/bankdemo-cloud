@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import jakarta.validation.Valid;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -49,37 +51,43 @@ public class OperationController {
 	
 	private final OperationService service;
 
-	@Operation(description = "Save money operation")
-	@ApiResponses(@ApiResponse(responseCode  = "201"))
+	@Operation(summary = "Save money operation", description = "Creates and persists a new financial operation.")
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public void save(@Valid @RequestBody OperationDTO dto) {service.save(dto);}
 	
 	@Operation(description = "Gets one operation")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = com.github.irybov.operation.Operation.class))), 
-			@ApiResponse(responseCode = "404")
-		})
+	@ApiResponse(responseCode = "200", 
+			content = @Content(schema = @Schema(implementation = com.github.irybov.operation.Operation.class)))
 	@GetMapping("/{id}")
-	public com.github.irybov.operation.Operation getOne(@PathVariable long id) {return service.getOne(id);}
+	public com.github.irybov.operation.Operation getOne(
+			@Parameter(description = "ID of the operation to fetch", example = "42")
+			@PathVariable long id) {
+		return service.getOne(id);
+	}
 	
 	@Operation(description = "Gets list of operations")
-	@ApiResponses(@ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = com.github.irybov.operation.Operation.class)))))
+	@ApiResponse(responseCode = "200", 
+		content = @Content(array = @ArraySchema(schema = @Schema(implementation = com.github.irybov.operation.Operation.class))))
 	@GetMapping("/{id}/list")
-	public List<com.github.irybov.operation.Operation> getList(@PathVariable int id) {return service.getList(id);}
+	public List<com.github.irybov.operation.Operation> getList(
+			@Parameter(description = "ID of the bill to get its operations", example = "42")
+			@PathVariable int id) {
+		return service.getList(id);
+	}
 	
 	@Operation(description = "Gets page of operations")
-	@PagebleAPI
+//	@PagebleAPI
 	@GetMapping("/{id}/page")
-	public Page<com.github.irybov.operation.Operation> getPage(@PathVariable int id, 
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
-			Optional<LocalDate> mindate, 
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
-			Optional<LocalDate> maxdate,
-			@RequestParam(required = false) Double minval, 
-			@RequestParam(required = false) Double maxval,
-			@RequestParam(required = false) String action, 
-			@SortDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+	public Page<com.github.irybov.operation.Operation> getPage(
+			@Parameter(description = "ID of the bill to get its operations", example = "42")
+			@PathVariable int id, 
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Optional<LocalDate> mindate, 
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Optional<LocalDate> maxdate,
+			@RequestParam Double minval, 
+			@RequestParam Double maxval,
+			@RequestParam String action, 
+			@ParameterObject @SortDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
 		
 		OffsetDateTime dateFrom = null;
 		OffsetDateTime dateTo = null;
@@ -94,7 +102,6 @@ public class OperationController {
 	@ResponseStatus(code = HttpStatus.NOT_FOUND)
 	@ExceptionHandler
 	protected void handleException(NoSuchElementException e){}
-	
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<List<String>> handleMethodArgumentsException(MethodArgumentNotValidException e) {
 	    List<String> errors = new ArrayList<String>();

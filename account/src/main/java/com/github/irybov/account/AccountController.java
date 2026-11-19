@@ -64,10 +64,8 @@ public class AccountController {
 	@Operation(description = "Registers new account")
 	@ApiResponses(value = {
 		@ApiResponse(responseCode = "201"), 
-		@ApiResponse(
-				responseCode = "404", 
-				content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
-	})
+		@ApiResponse(responseCode = "404", 
+				content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))})
 	@PostMapping()
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(@Valid @RequestBody Registration registration) {service.create(registration);}
@@ -114,10 +112,7 @@ public class AccountController {
 //	public AccountDTO getOne(@PathVariable int id) {return service.getOne(id);}
 	
 	@Operation(description = "Gets one account")
-	@ApiResponses(value = {
-		@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = AccountDTO.class))), 
-		@ApiResponse(responseCode = "404")
-	})
+	@ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = AccountDTO.class)))
 	@GetMapping("/{phone}")
 	public AccountDTO getOne(
 			@Parameter(description = "10-digit account phone number", example = "1234567890")
@@ -139,8 +134,7 @@ public class AccountController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200"), 
 			@ApiResponse(responseCode = "400", 
-				content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))
-	})
+				content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class))))})
 	@PatchMapping("/{phone}")
 	public void changePassword(
 			@Parameter(description = "10-digit account phone number", example = "1234567890")
@@ -175,7 +169,6 @@ public class AccountController {
 	}
 	
 	@Operation(description = "Deletes existing bill from account")
-	@ApiResponse(responseCode = "204")
 	@DeleteMapping("/{phone}/bills/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteBill(
