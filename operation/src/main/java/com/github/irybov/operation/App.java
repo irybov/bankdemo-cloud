@@ -13,7 +13,12 @@ import org.springframework.cloud.openfeign.support.SortJacksonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
+import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import tools.jackson.databind.JacksonModule;
@@ -30,11 +35,17 @@ import com.querydsl.sql.spring.SpringExceptionTranslator;
 @EnableDiscoveryClient
 //@EnableJdbcRepositories
 @EnableFeignClients
+@EnableSpringDataWebSupport(pageSerializationMode = PageSerializationMode.VIA_DTO)
 public class App 
 {
     public static void main( String[] args )
     {
     	SpringApplication.run(App.class, args);
+    }
+    
+    @Bean
+    public TransactionOperations transactionOperations(PlatformTransactionManager txManager) {
+        return new TransactionTemplate(txManager);
     }
 /*    
 	@Bean

@@ -434,9 +434,7 @@ public class AppIT {
 			var cache = cacheManager.getCache(cacheName);
 			if (cache != null) cache.clear();
 		});
-        if(HAZELCAST_CONTAINER.isRunning()) {
-           HAZELCAST_CONTAINER.stop(); 
-        }
+        if(HAZELCAST_CONTAINER.isRunning()) HAZELCAST_CONTAINER.stop();
 	}
 /* 	
 	@AfterAll void clear(HazelcastInstance hazelcastInstance) {

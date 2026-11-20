@@ -41,6 +41,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.springframework.data.domain.Page;
@@ -49,6 +50,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.RestTemplate;
 
 import com.querydsl.core.types.Expression;
@@ -67,6 +69,8 @@ class OperationServiceTest {
 //	private JdbcTemplate jdbcTemplate;
 	@Mock
 	private SQLQueryFactory queryFactory;
+	@Spy
+	private TransactionOperations txOps = TransactionOperations.withoutTransaction();
 	@InjectMocks
 	private OperationService service;
 
@@ -83,8 +87,9 @@ class OperationServiceTest {
 	
 	@BeforeEach
 	void set_up() {
+//		txOps = TransactionOperations.withoutTransaction();
 		autoClosable = MockitoAnnotations.openMocks(this);
-		service = new OperationService(billClient, jdbc, queryFactory);
+		service = new OperationService(billClient, jdbc, queryFactory, txOps);
 	}
 	
 	@Test
@@ -104,6 +109,7 @@ class OperationServiceTest {
 			verify(jdbc).save(any(Operation.class));
 			verify(billClient).updateBalance(any(Map.class));
 	//		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+			verify(txOps).executeWithoutResult(any());
 		}
 
 	@Test

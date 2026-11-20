@@ -80,13 +80,14 @@ public class OperationController {
 //	@PagebleAPI
 	@GetMapping("/{id}/page")
 	public Page<com.github.irybov.operation.Operation> getPage(
-			@Parameter(description = "ID of the bill to get its operations", example = "42")
+			@Parameter(description = "ID of one or both operation participants", example = "42")
 			@PathVariable int id, 
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Optional<LocalDate> mindate, 
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Optional<LocalDate> maxdate,
 			@RequestParam Double minval, 
 			@RequestParam Double maxval,
-			@RequestParam String action, 
+			@Parameter(description = "Transaction type", example = "TRANSFER")
+			@RequestParam(required = false) String action, 
 			@ParameterObject @SortDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
 		
 		OffsetDateTime dateFrom = null;

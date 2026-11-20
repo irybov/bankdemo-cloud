@@ -45,6 +45,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,6 +55,8 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 @WebMvcTest(OperationController.class)
 class OperationControllerTest {
 	
+	@MockitoBean
+	private TransactionOperations txOps;
     @MockitoBean
     private DataSource dataSource;
 	@MockitoBean
@@ -221,10 +224,14 @@ class OperationControllerTest {
 						.param("size", "0")
 				)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.pageable").exists())
-			.andExpect(jsonPath("$.sort").exists())
+//			.andExpect(jsonPath("$.pageable").exists())
+//			.andExpect(jsonPath("$.sort").exists())
+			.andExpect(jsonPath("$.content").exists())
 			.andExpect(jsonPath("$.content").isArray())
-			.andExpect(jsonPath("$.content.length()").value(operations.size()));
+			.andExpect(jsonPath("$.content.length()").value(operations.size()))
+			.andExpect(jsonPath("$.page").exists())
+			.andExpect(jsonPath("$.page.totalElements").isNumber())
+			.andExpect(jsonPath("$.page.totalElements").value(operations.size()));
 		
 		verify(service).getPage(anyInt(), anyString(), anyDouble(), anyDouble(),
 				any(OffsetDateTime.class), any(OffsetDateTime.class), any(Pageable.class));

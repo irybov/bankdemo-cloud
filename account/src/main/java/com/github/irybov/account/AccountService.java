@@ -38,6 +38,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -66,6 +67,7 @@ public class AccountService {
 //	private final RestTemplate restTemplate;
 	private final AccountMapper mapStruct;
 	private final AccountJDBC jdbc;
+	private final TransactionOperations txOps;
 	
 	@Lazy
 	@Autowired
@@ -163,10 +165,14 @@ public class AccountService {
 		self.update(account);
 	}
 	
-	@Transactional
+//	@Transactional
 	public BillDTO addBill(String phone, String currency) {
 		
-		Account account = self.getAccount(phone);
+		Account account = txOps.execute(status -> {
+			try {return self.getAccount(phone);}
+			catch(Exception e) {throw new RuntimeException(e);}
+		});
+		
 		BillDTO bill = billClient.create(currency, account.getId());
 //        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString("http://BILL/bills")
 //    	        .queryParam("currency", currency)
@@ -175,17 +181,30 @@ public class AccountService {
         
         if(account.getBills() != null) {account.getBills().add(bill.getId());}
         else {account.setBills(Stream.of(bill.getId()).collect(Collectors.toSet()));}
-        self.update(account);
+        
+		txOps.executeWithoutResult(status -> {
+			try {self.update(account);}
+			catch(Exception e) {throw new RuntimeException(e);}
+		});
+		
         return bill;
 	}
 	
-	@Transactional
+//	@Transactional
 	public void deleteBill(String phone, int id) {
 		
-		Account account = self.getAccount(phone);
+		Account account = txOps.execute(status -> {
+			try {return self.getAccount(phone);}
+			catch(Exception e) {throw new RuntimeException(e);}
+		});
+		
 		billClient.delete(id);
 		account.getBills().remove(id);
-		self.update(account);
+		
+		txOps.executeWithoutResult(status -> {
+			try {self.update(account);}
+			catch(Exception e) {throw new RuntimeException(e);}
+		});
 	}
 	
 	@Transactional(propagation = Propagation.MANDATORY, noRollbackFor = Exception.class)

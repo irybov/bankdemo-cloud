@@ -185,7 +185,7 @@ public class AppIT {
 //		WireMock.configureFor("localhost", 8761);
 	}
 	@BeforeEach
-	void setup() {wireMockServer.resetRequests();}
+	void set_up() {wireMockServer.resetRequests();}
 	
 	@Test
 	void context_loading(ApplicationContext context) {
@@ -748,6 +748,7 @@ public class AppIT {
 			var cache = cacheManager.getCache(cacheName);
 			if (cache != null) cache.clear();
 		});
+		if(HAZELCAST_CONTAINER.isRunning()) HAZELCAST_CONTAINER.stop();
 	}
 	
 }

@@ -16,7 +16,9 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -41,8 +43,10 @@ public class OperationService {
 	private final OperationJDBC jdbc;
 //	private JdbcTemplate jdbcTemplate;
 	private final SQLQueryFactory queryFactory;
+	private final TransactionOperations txOps;
 	
-	@Transactional(readOnly = false, rollbackFor = Exception.class)
+//	@Transactional(readOnly = false, rollbackFor = Exception.class)
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void save(OperationDTO dto) {
 		
 		Map<Integer, Double> data = new LinkedHashMap<>();
@@ -61,7 +65,10 @@ public class OperationService {
 		}
 		billClient.updateBalance(data);
 //		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
-		jdbc.save(construct(dto));
+		txOps.executeWithoutResult(status -> {
+			try {jdbc.save(construct(dto));}
+			catch(Exception e) {throw new RuntimeException(e);}
+		});
 	}
 	
 	Operation construct(OperationDTO dto) {

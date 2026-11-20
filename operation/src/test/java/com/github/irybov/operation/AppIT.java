@@ -8,6 +8,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import java.net.URI;
 import java.sql.Timestamp;
@@ -321,11 +322,14 @@ class AppIT {
 		// 	List<Operation> content = page.getContent();
 		// 	assert content.size() == 1;
 		// });
+		.jsonPath("$.content").exists()
 		.jsonPath("$.content").isArray()
 		.jsonPath("$.content.length()").isEqualTo(1)
-		.jsonPath("$.totalElements").isEqualTo(3)
-		.jsonPath("$.pageable.paged").exists()
-		.jsonPath("$.pageable.sort").exists();
+		.jsonPath("$.page").exists()
+		.jsonPath("$.page.totalElements").isNumber()
+		.jsonPath("$.page.totalElements").isEqualTo(3);
+//		.jsonPath("$.pageable.paged").exists()
+//		.jsonPath("$.pageable.sort").exists();
 /* 		
         ResponseEntity<Page<Operation>> response = testRestTemplate.exchange(uriBuilder.toUriString(), 
                 HttpMethod.GET, null, new ParameterizedTypeReference<Page<Operation>>(){});

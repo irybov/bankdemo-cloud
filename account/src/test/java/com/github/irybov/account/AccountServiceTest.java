@@ -47,6 +47,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -68,6 +69,8 @@ public class AccountServiceTest {
 	private AccountMapperImpl mapStruct;
 	@Mock
 	private AccountJDBC jdbc;
+	@Spy
+	private TransactionOperations txOps = TransactionOperations.withoutTransaction();
 	@InjectMocks
 	private AccountService service;
 	@Mock
@@ -79,7 +82,7 @@ public class AccountServiceTest {
 	void prepare() {
 		
 		MockitoAnnotations.openMocks(this);
-		service = new AccountService(env, billClient, mapStruct, jdbc);
+		service = new AccountService(env, billClient, mapStruct, jdbc, txOps);
 		ReflectionTestUtils.setField(service, "self", self);
 		ReflectionTestUtils.setField(service, "secretFile", "src/test/resources/token_secret.txt");
 		
@@ -182,7 +185,8 @@ public class AccountServiceTest {
 //		when(restTemplate.exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){}))
 //			.thenReturn(new ResponseEntity<List<BillDTO>>(bills, HttpStatus.OK));
-		when(billClient.getList(anyInt())).thenReturn(bills);
+		when(self.getList(anyInt())).thenReturn(BillsResult.success(bills));
+//		when(billClient.getList(anyInt())).thenReturn(bills);
 		
 		AccountDTO account = service.getOne(anyString());
 		assertThat(account).isExactlyInstanceOf(AccountDTO.class);
@@ -192,7 +196,8 @@ public class AccountServiceTest {
 //		verify(jdbc).findByPhone(anyString());
 //		verify(restTemplate).exchange("http://BILL/bills/" + account.getId() + "/list", 
 //				HttpMethod.GET, null, new ParameterizedTypeReference<List<BillDTO>>(){});
-		verify(billClient).getList(anyInt());
+		verify(self).getList(anyInt());
+//		verify(billClient).getList(anyInt());
 	}
 	
 	@Test
@@ -264,6 +269,9 @@ public class AccountServiceTest {
 //		verify(restTemplate).postForObject(uriBuilder.toUriString(), null, BillDTO.class);
 		verify(billClient).create(anyString(), anyInt());
 		verify(self).getAccount(anyString());
+		
+		verify(txOps).execute(any());
+		verify(txOps).executeWithoutResult(any());
 	}
 	
 	@Test
@@ -284,6 +292,9 @@ public class AccountServiceTest {
 //		verify(jdbc).findByPhone(anyString());
 		verify(self).update(any(Account.class));
 		verify(billClient).delete(anyInt());
+		
+		verify(txOps).execute(any());
+		verify(txOps).executeWithoutResult(any());
 	}
 	
 	@AfterEach
