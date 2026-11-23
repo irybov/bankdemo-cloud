@@ -84,8 +84,8 @@ public class OperationController {
 			@PathVariable int id, 
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Optional<LocalDate> mindate, 
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Optional<LocalDate> maxdate,
-			@RequestParam Double minval, 
-			@RequestParam Double maxval,
+			@RequestParam(required = false) Double minval, 
+			@RequestParam(required = false) Double maxval,
 			@Parameter(description = "Transaction type", example = "TRANSFER")
 			@RequestParam(required = false) String action, 
 			@ParameterObject @SortDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {

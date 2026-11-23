@@ -32,21 +32,23 @@ import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.sql.SQLQueryFactory;
 
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
-@Transactional(readOnly = true, noRollbackFor = Exception.class)
+//@Transactional(readOnly = true, noRollbackFor = Exception.class)
 @RequiredArgsConstructor
 public class OperationService {
 
 	private final BillClient billClient;
 //	private final RestTemplate restTemplate;
+	private final ObjectMapper objectMapper;
+	private final OperationOutboxRepo repo;
 	private final OperationJDBC jdbc;
 //	private JdbcTemplate jdbcTemplate;
 	private final SQLQueryFactory queryFactory;
 	private final TransactionOperations txOps;
 	
-//	@Transactional(readOnly = false, rollbackFor = Exception.class)
-	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+//	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void save(OperationDTO dto) {
 		
 		Map<Integer, Double> data = new LinkedHashMap<>();
@@ -61,14 +63,19 @@ public class OperationService {
 				if("Demo".equals(dto.getBank())) data.put(dto.getRecipient(), dto.getAmount());
 				else data.put(dto.getSender(), -dto.getAmount());
 			}
-			default -> throw new IllegalArgumentException("Unknown action: " + dto.getAction());
+//			default -> throw new IllegalArgumentException("Unknown action: " + dto.getAction());
 		}
-		billClient.updateBalance(data);
-//		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
+		Operation operation = construct(dto);
+		String json = objectMapper.writeValueAsString(data);
 		txOps.executeWithoutResult(status -> {
-			try {jdbc.save(construct(dto));}
+			try {
+				jdbc.save(operation);
+				repo.save(OperationOutbox.pending(json));
+			}
 			catch(Exception e) {throw new RuntimeException(e);}
 		});
+//		billClient.updateBalance(data);
+//		restTemplate.patchForObject("http://BILL/bills", data, Void.class);
 	}
 	
 	Operation construct(OperationDTO dto) {
@@ -99,7 +106,7 @@ public class OperationService {
 	
 	public Operation getOne(long id) {return jdbc.findById(id).get();}	
 	public List<Operation> getList(int id) {return jdbc.findBySenderOrRecipientOrderByIdDesc(id, id);}
-	
+	@Transactional(readOnly = true)
 	public Page<Operation> getPage(int id, String action, Double minval, Double maxval,
 			OffsetDateTime mindate, OffsetDateTime maxdate, Pageable pageable){
 		

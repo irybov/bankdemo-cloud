@@ -2,24 +2,31 @@ package com.github.irybov.operation;
 
 import javax.sql.DataSource;
 
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.http.converter.autoconfigure.ServerHttpMessageConvertersCustomizer;
+import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
-import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.cloud.openfeign.support.PageJacksonModule;
-import org.springframework.cloud.openfeign.support.SortJacksonModule;
+//import org.springframework.cloud.openfeign.EnableFeignClients;
+//import org.springframework.cloud.openfeign.support.PageJacksonModule;
+//import org.springframework.cloud.openfeign.support.SortJacksonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.resilience.annotation.EnableResilientMethods;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.service.registry.ImportHttpServices;
 
 import tools.jackson.databind.JacksonModule;
 import tools.jackson.databind.ObjectMapper;
@@ -34,8 +41,11 @@ import com.querydsl.sql.spring.SpringExceptionTranslator;
 @SpringBootApplication
 @EnableDiscoveryClient
 //@EnableJdbcRepositories
-@EnableFeignClients
+//@EnableFeignClients
 @EnableSpringDataWebSupport(pageSerializationMode = PageSerializationMode.VIA_DTO)
+@EnableResilientMethods
+@ImportHttpServices(group = "bill", types = BillClient.class)
+@EnableTransactionManagement
 public class App 
 {
     public static void main( String[] args )
@@ -46,6 +56,16 @@ public class App
     @Bean
     public TransactionOperations transactionOperations(PlatformTransactionManager txManager) {
         return new TransactionTemplate(txManager);
+    }
+    
+    @Bean
+    public RestClientCustomizer disableApacheRetriesCustomizer() {
+        CloseableHttpClient httpClient = HttpClients.custom()
+            .disableAutomaticRetries()
+            .build();
+
+        return restClientBuilder -> restClientBuilder
+            .requestFactory(new HttpComponentsClientHttpRequestFactory(httpClient));
     }
 /*    
 	@Bean

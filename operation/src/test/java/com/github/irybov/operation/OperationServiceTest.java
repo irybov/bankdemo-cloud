@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -58,11 +59,17 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.sql.SQLQueryFactory;
 
+import tools.jackson.databind.ObjectMapper;
+
 class OperationServiceTest {
 
 	@Mock
 	private BillClient billClient;
 //	private RestTemplate restTemplate;
+	@Spy
+	private ObjectMapper objectMapper;
+	@Spy
+	private OperationOutboxRepo repo;
 	@Mock
 	private OperationJDBC jdbc;
 //	@Mock
@@ -89,28 +96,30 @@ class OperationServiceTest {
 	void set_up() {
 //		txOps = TransactionOperations.withoutTransaction();
 		autoClosable = MockitoAnnotations.openMocks(this);
-		service = new OperationService(billClient, jdbc, queryFactory, txOps);
+		service = new OperationService(billClient, objectMapper, repo, jdbc, queryFactory, txOps);
 	}
 	
 	@Test
-		void can_save() {
-			
-	//		doNothing().when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
-	    	doAnswer(new Answer<Void>() {
-				@Override
-				public Void answer(InvocationOnMock invocation) {return null;}})
-	    	.when(billClient).updateBalance(any(Map.class));
-	//    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
-			when(jdbc.save(any(Operation.class))).thenReturn(new Operation());
-			
-			service.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
-					new Random().nextInt(), new Random().nextInt(), "Demo"));
-			
-			verify(jdbc).save(any(Operation.class));
-			verify(billClient).updateBalance(any(Map.class));
-	//		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
-			verify(txOps).executeWithoutResult(any());
-		}
+	void can_save() {
+		
+//		doNothing().when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+//	    	doAnswer(new Answer<Void>() {
+//				@Override
+//				public Void answer(InvocationOnMock invocation) {return null;}})
+//	    	.when(billClient).updateBalance(any(UUID.class), any(Map.class));
+//    	.when(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));		
+//			when(jdbc.save(any(Operation.class))).thenReturn(new Operation());
+		
+		service.save(new OperationDTO(new Random().nextDouble(), Action.EXTERNAL, "SEA",
+				new Random().nextInt(), new Random().nextInt(), "Demo"));
+		
+		verify(jdbc).save(any(Operation.class));
+		verify(repo).save(any(OperationOutbox.class));
+//			verify(billClient).updateBalance(any(UUID.class), any(Map.class));
+//		verify(restTemplate).patchForObject(anyString(), any(Map.class), eq(Void.class));
+		verify(txOps).executeWithoutResult(any());
+		verify(objectMapper).writeValueAsString(any(Map.class));
+	}
 
 	@Test
 	void can_build() {

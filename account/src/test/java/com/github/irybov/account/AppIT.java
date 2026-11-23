@@ -166,6 +166,7 @@ public class AppIT {
 //	private MockRestServiceServer mockServer;
 	@Autowired
 	private CircuitBreakerRegistry circuitBreakerRegistry;
+	private CircuitBreaker circuitBreaker;
 	
 	@Value("${server.address}")
 	private String uri;
@@ -183,9 +184,10 @@ public class AppIT {
 		wireMockServer = new WireMockServer(new WireMockConfiguration().bindAddress("localhost").port(8761));
 		wireMockServer.start();
 //		WireMock.configureFor("localhost", 8761);
+		circuitBreaker =  circuitBreakerRegistry.circuitBreaker("bill");
 	}
 	@BeforeEach
-	void set_up() {wireMockServer.resetRequests();}
+	void set_up() {wireMockServer.resetRequests(); circuitBreaker.reset();}
 	
 	@Test
 	void context_loading(ApplicationContext context) {
@@ -491,7 +493,7 @@ public class AppIT {
 //	    System.out.println("REQ: " + e.getRequest().getLoggedDate() + " | headers=" + e.getRequest().getHeaders()));
 	    
 	    wireMockServer.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
-	    assertThat(circuitBreakerRegistry.circuitBreaker("bill").getState(), is(CircuitBreaker.State.CLOSED));
+	    assertThat(circuitBreaker.getState(), is(CircuitBreaker.State.CLOSED));
 	}
 
 	@Test
@@ -524,7 +526,7 @@ public class AppIT {
 	    assertThat(response.isBillsUnavailable(), is(true));
 	    
 	    wireMockServer.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo(requestURI)));
-	    assertThat(circuitBreakerRegistry.circuitBreaker("bill").getState(), is(CircuitBreaker.State.CLOSED));
+	    assertThat(circuitBreaker.getState(), is(CircuitBreaker.State.CLOSED));
 	}
 	
 	@Test

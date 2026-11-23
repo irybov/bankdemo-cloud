@@ -172,7 +172,7 @@ public class BillService {
 	public Set<BillDTO> getCachedList(int owner) {return new LinkedHashSet<>();}
 */
 	@Transactional(propagation = Propagation.MANDATORY)
-	@CachePut(cacheNames = SETS, key = "#owner")
+	@CachePut(cacheNames = SETS, key = "#owner", unless = "#result == null")
 	public Set<BillDTO> updateCachedList(int owner, Set<BillDTO> list) {return list;}
 
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -184,7 +184,7 @@ public class BillService {
 	public Bill getBill(int id) {return jdbc.findById(id).get();}
 	
 	@Transactional(propagation = Propagation.MANDATORY)
-	@CachePut(cacheNames = BILLS, key = "#result.id")
+	@CachePut(cacheNames = BILLS, key = "#result.id", unless = "#result == null")
 	public Bill updateCachedBill(Bill bill) {return bill;}
 	
 }

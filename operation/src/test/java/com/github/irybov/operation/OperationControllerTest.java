@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,6 +43,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -116,6 +118,24 @@ class OperationControllerTest {
 		.andExpect(jsonPath("$", hasItem("Sender's bill number should be positive")))
 		.andExpect(jsonPath("$", hasItem("Recepient's bill number should be less than 10 digits length")))
 		.andExpect(jsonPath("$", hasItem("Bank's name must not be blank")));
+		verifyNoInteractions(service);
+		
+	    String invalidJson = """
+	            {
+	                "amount": 0.01,
+	                "action": "FANTASY",
+	                "type": "SEA",
+	                "count": 4,
+	                "limit": 4,
+	                "description": "Demo"
+	            }
+	            """;
+		mockMVC.perform(post("/operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(invalidJson))
+		.andExpect(result -> assertThat
+				(result.getResolvedException() instanceof HttpMessageNotReadableException).isTrue())
+		.andExpect(status().isBadRequest());
 	}
 	
 	@Test

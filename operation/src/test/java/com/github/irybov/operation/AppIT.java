@@ -12,14 +12,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.net.URI;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -43,10 +46,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -64,6 +70,13 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 //@AutoConfigureWireMock(port = 8888)
 @TestPropertySource(properties = "spring.config.location=classpath:/")
 class AppIT {
+	
+    @Autowired
+    private BillOutboxRelay relay;
+    @Autowired
+    private OperationOutboxRepo outboxRepo;
+    @MockitoBean
+    private TaskScheduler taskScheduler;
 /*	
 	@Autowired
 	private RestTemplate restTemplate;
@@ -98,13 +111,15 @@ class AppIT {
 	@BeforeAll
 	void prepare() {		
 		populator = new ResourceDatabasePopulator();
-		populator.addScripts(new ClassPathResource("test-operations-h2.sql"));
+		populator.addScripts(new ClassPathResource("test-operations-h2.sql"), new ClassPathResource("test-outbox-data-h2.sql"));
 		populator.execute(dataSource);
 //		mockServer = MockRestServiceServer.createServer(restTemplate);
 		wireMockServer = new WireMockServer(new WireMockConfiguration().port(8761));
 		wireMockServer.start();
 		WireMock.configureFor("localhost", 8761);
 	}
+	@BeforeEach
+	void set_up() {wireMockServer.resetRequests();}
 	
 	@Test
 	void context_loading(ApplicationContext context) {
@@ -161,7 +176,7 @@ class AppIT {
 	    
 //	    mockServer.verify();
 //	    mockServer.reset();
-	    wireMockServer.verify(WireMock.exactly(1), WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI)));
+//	    wireMockServer.verify(WireMock.exactly(1), WireMock.patchRequestedFor(WireMock.urlEqualTo(requestURI)));
 	}
 	
 	@Test
@@ -169,7 +184,6 @@ class AppIT {
 		
 		OperationDTO operation = new OperationDTO(-0.01, null, "coin", -4, 1_000_000_000, " ");
 		// HttpEntity<OperationDTO> entity = new HttpEntity<>(operation);
-
 		webTestClient.post()
 		.uri("/operations")
 		.contentType(MediaType.APPLICATION_JSON)
@@ -199,7 +213,30 @@ class AppIT {
         assertThat(violations.getBody().contains("Sender's bill number should be positive"), is(true));
         assertThat(violations.getBody().contains("Recepient's bill number should be less than 10 digits length"), is(true));
         assertThat(violations.getBody().contains("Bank's name must not be blank"), is(true));
-	 */	
+	 */
+	    String invalidJson = """
+	            {
+	                "amount": 0.01,
+	                "action": "FANTASY",
+	                "type": "SEA",
+	                "count": 4,
+	                "limit": 4,
+	                "description": "Demo"
+	            }
+	            """;
+		
+		webTestClient.post()
+		.uri("/operations")
+		.contentType(MediaType.APPLICATION_JSON)
+		.bodyValue(invalidJson)
+		.exchange()
+		.expectStatus().isBadRequest()
+		.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+	    .expectBody()
+	    .jsonPath("$.title").isEqualTo("Bad Request")
+	    .jsonPath("$.status").isEqualTo(400)
+	    .jsonPath("$.detail").isEqualTo("Failed to read request")
+	    .jsonPath("$.instance").isEqualTo("/operations");
 	}
 	
 	@Test
@@ -339,8 +376,72 @@ class AppIT {
         assertThat(response.getBody().getSort().isSorted(), is(true));
  */		
 	}
+	
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	@Test
+	void shouldRelayOutboxRecordsViaWireMock() {
+		
+	    UUID id1 = UUID.fromString("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"); // {"1001": 500.00}
+	    UUID id2 = UUID.fromString("b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22"); // {"1001": -1250.50, "1002": 1250.50}
+//	    UUID id400 = UUID.fromString("f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a66");
 
-	@AfterAll void clear() {
+	    // Seed one additional due record for the 400 Bad Request scenario
+//	    outboxRepo.save(new OperationOutbox(
+//	        id400, "{\"1004\": -10.00}", OperationOutbox.Status.PENDING, 0, Instant.now().minusSeconds(5)
+//	    ));
+	    // Insert the 3rd record using OperationOutbox.pending(...) so isNew = true
+	    OperationOutbox badRequestItem = OperationOutbox.pending("{\"1004\": -10.00}");
+	    badRequestItem.setNextAttemptAt(Instant.now().minusSeconds(5));
+	    outboxRepo.save(badRequestItem);
+	    UUID id400 = badRequestItem.getId(); // <-- Use the actual generated UUID!
+
+	    // 1. id1 -> 200 OK -> SENT
+	    wireMockServer.stubFor(WireMock.patch(WireMock.urlEqualTo("/bills"))
+	        .withHeader("Idempotency-Key", WireMock.equalTo(id1.toString()))
+	        .withRequestBody(WireMock.equalToJson("{\"1001\": 500.00}"))
+	        .willReturn(WireMock.aResponse().withStatus(200)));
+
+	    // 2. id2 -> 503 Service Unavailable -> @Retryable (3 total HTTP calls) -> PENDING + DB backoff
+	    wireMockServer.stubFor(WireMock.patch(WireMock.urlEqualTo("/bills"))
+	        .withHeader("Idempotency-Key", WireMock.equalTo(id2.toString()))
+	        .withRequestBody(WireMock.equalToJson("{\"1001\": -1250.50, \"1002\": 1250.50}"))
+	        .willReturn(WireMock.aResponse().withStatus(503)));
+//	    	.willReturn(WireMock.aResponse().withStatus(500)));
+
+	    // 3. id400 -> 400 Bad Request -> NO @Retryable (1 HTTP call only) -> FAILED
+	    wireMockServer.stubFor(WireMock.patch(WireMock.urlEqualTo("/bills"))
+	        .withHeader("Idempotency-Key", WireMock.equalTo(id400.toString()))
+	        .withRequestBody(WireMock.equalToJson("{\"1004\": -10.00}"))
+	        .willReturn(WireMock.aResponse().withStatus(400)));
+
+	    Instant beforeRun = Instant.now();
+	    relay.relayPendingBills();
+
+	    // Verify HTTP call counts (proves 400 did NOT trigger @Retryable, while 503 retried twice)
+	    wireMockServer.verify(1, WireMock.patchRequestedFor(WireMock.urlEqualTo("/bills"))
+	        .withHeader("Idempotency-Key", WireMock.equalTo(id1.toString())));
+	    wireMockServer.verify(3, WireMock.patchRequestedFor(WireMock.urlEqualTo("/bills"))
+	        .withHeader("Idempotency-Key", WireMock.equalTo(id2.toString())));
+	    wireMockServer.verify(1, WireMock.patchRequestedFor(WireMock.urlEqualTo("/bills"))
+	        .withHeader("Idempotency-Key", WireMock.equalTo(id400.toString())));
+
+	    // Verify DB states
+	    assertThat(outboxRepo.findById(id1)).get()
+	        .extracting(OperationOutbox::getStatus)
+	        .isEqualTo(OperationOutbox.Status.SENT);
+
+	    OperationOutbox retried = outboxRepo.findById(id2).orElseThrow();
+	    assertThat(retried.getStatus()).isEqualTo(OperationOutbox.Status.PENDING);
+	    assertThat(retried.getAttempts()).isEqualTo(3);
+	    assertThat(retried.getNextAttemptAt()).isAfter(beforeRun.plusSeconds(35));
+
+	    OperationOutbox failed = outboxRepo.findById(id400).orElseThrow();
+	    assertThat(failed.getStatus()).isEqualTo(OperationOutbox.Status.FAILED);
+	    assertThat(failed.getAttempts()).isZero();
+	}
+
+	@AfterAll
+	void clear() {
 		populator.setScripts(new ClassPathResource("test-clean-data-h2.sql"));
 		populator.execute(dataSource);
 		populator = null;
