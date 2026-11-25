@@ -28,9 +28,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
 	</dependency>
   </dependencies>
 
-  <properties>
+<!--  <properties>
     <app.main.class>com.github.irybov.config.App</app.main.class>
-  </properties>
+  </properties>-->
   
     <build>
         <plugins>
@@ -45,17 +45,18 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/
                         <entrypoint>
                             <arg>sh</arg>
                             <arg>-c</arg>
-                            <arg>exec java $JAVA_OPTS -Dspring.cloud.config.server.native.searchLocations="$SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS" -cp /app/resources:/app/classes:/app/libs/* ${app.main.class}</arg>
+<!--                            <arg>exec java $JAVA_OPTS -Dspring.cloud.config.server.native.searchLocations="$SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS" -cp /app/resources:/app/classes:/app/libs/* ${app.main.class}</arg>-->
+                            <arg>exec java $JAVA_OPTS -Dspring.cloud.config.server.native.searchLocations="$SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS" -cp @/app/jib-classpath-file @/app/jib-main-class-file</arg>
                         </entrypoint>
                     </container>
-                    <extraDirectories>
+<!--                    <extraDirectories>
                         <paths>
                             <path>
                                 <from>src/main/resources/configs</from>
                                 <into>/app/configs</into>
                             </path>
                         </paths>
-                    </extraDirectories>
+                    </extraDirectories>-->
                 </configuration>
             </plugin>
         </plugins>

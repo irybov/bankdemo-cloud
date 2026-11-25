@@ -18,6 +18,8 @@ import java.util.stream.Stream;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolation;
@@ -59,9 +61,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AccountService {
 	
-	private final Environment env;
-	@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}")
-	private String secretFile;
+	private final TokenConfig tokenConfig;
+//	private final Environment env;
+//	@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}")
+//	private String secretFile;
+//	private String secret;
+//	private long tokenLifetimeSeconds;
 //    private final Validator validator;
     private final BillClient billClient;
 //	private final RestTemplate restTemplate;
@@ -72,9 +77,27 @@ public class AccountService {
 	@Lazy
 	@Autowired
 	private AccountService self;
-	
 	private static final String ACCOUNTS = "accounts";
-	
+/*	
+	@PostConstruct
+	void init() {
+		try {
+			this.secret = Files.readString(Path.of(secretFile)).stripTrailing();
+		}
+		catch (IOException e) {
+			throw new IllegalStateException("Failed to read token secret from " + secretFile, e);
+		}
+		if (this.secret.isBlank()) {
+			throw new IllegalStateException("Token secret file is empty: " + secretFile);
+		}
+		
+		String tokenLifetime = env.getRequiredProperty("token.lifetime");
+		this.tokenLifetimeSeconds = Long.parseLong(tokenLifetime);
+		if (this.tokenLifetimeSeconds <= 0) {
+			throw new IllegalStateException("token.lifetime must be positive, got: " + this.tokenLifetimeSeconds);
+		}
+	}
+*/	
 	@Transactional
 	public void create(Registration registration) {
 		
@@ -91,26 +114,29 @@ public class AccountService {
 	
 	@Transactional(readOnly = true, noRollbackFor = Exception.class)
 	public String generateToken(String header) {
-		
+/*		
 		String secret = null;
 		try {
 			secret = Files.readString(Path.of(secretFile)).stripTrailing();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+*/		
 		String[] login = header.split(":");
 		Account account = self.getAccount(login[0]);
 		if(account.getPassword().equals(login[1])) {
 //			SecretKey key = new SecretKeySpec(env.getProperty("token.secret").getBytes(), 
 //			SecretKey key = new SecretKeySpec(secret.getBytes(), SignatureAlgorithm.HS256.getJcaName());
-			SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
+			SecretKey key = Keys.hmacShaKeyFor(tokenConfig.getSecret().getBytes());
+//			SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
 			Instant now = Instant.now();
 			String token = Jwts.builder()
 					.claim("scope", account.getRoles())
 					.claim("active", account.isActive())
 					.subject(account.getPhone())
 					.issuer("bankdemo")
-					.expiration(Date.from(now.plusSeconds(Integer.parseInt(env.getProperty("token.lifetime")))))
+//					.expiration(Date.from(now.plusSeconds(this.tokenLifetimeSeconds)))
+					.expiration(Date.from(now.plusSeconds(tokenConfig.getTokenLifetimeSeconds())))
 					.issuedAt(Date.from(now))
 					.signWith(key, Jwts.SIG.HS256)
 					.compact();

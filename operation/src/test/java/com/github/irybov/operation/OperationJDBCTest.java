@@ -32,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 import com.querydsl.core.types.ExpressionUtils;
@@ -45,6 +46,7 @@ import com.querydsl.sql.SQLQueryFactory;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Sql("/test-operations-h2.sql")
 @DataJdbcTest
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 class OperationJDBCTest {
 	
 	@Autowired

@@ -32,11 +32,13 @@ import org.springframework.boot.data.jdbc.test.autoconfigure.DataJdbcTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.util.Streamable;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 //@Sql("/test-accounts-h2.sql")
 @DataJdbcTest
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 @TestInstance(Lifecycle.PER_CLASS)
 public class AccountJDBCTest {
 

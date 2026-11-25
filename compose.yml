@@ -9,8 +9,10 @@ networks:
     internal: true
     
 secrets:
-  token_secret:
-    file: ./token_secret.txt
+  encrypt.key:
+    file: ./config_encrypt_key.txt
+#  token_secret:
+#    file: ./token_secret.txt
 #  admin_secret:
 #    file: ./admin_secret.txt
 
@@ -132,9 +134,10 @@ services:
       start_period: 5s
 
   config:
-    build:
-      context: ./config
-      dockerfile: Dockerfile
+#    build:
+#      context: ./config
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
 #    develop:
 #      watch:
 #        - path: ./config/target/config-1.2.5-SNAPSHOT.jar
@@ -145,6 +148,10 @@ services:
       SPRING_CLOUD_CONFIG_USERNAME: "${SPRING_CLOUD_CONFIG_USERNAME}"
       SPRING_CLOUD_CONFIG_PASSWORD: "${SPRING_CLOUD_CONFIG_PASSWORD}"
       SPRING_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///app/configs
+    volumes:
+      - ./configs/docker:/app/configs:ro
+    secrets:
+      - encrypt.key
     networks:
       - common-net
     healthcheck:
@@ -156,9 +163,10 @@ services:
       start_period: 25s
 
   admin:
-    build:
-      context: ./admin
-      dockerfile: Dockerfile
+#    build:
+#      context: ./admin
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     expose:
       - "8080"
 #    ports:
@@ -183,9 +191,10 @@ services:
       start_period: 5s
 
   eureka:
-    build:
-      context: ./eureka
-      dockerfile: Dockerfile
+#    build:
+#      context: ./eureka
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     expose:
       - "8761"
 #    ports:
@@ -211,9 +220,10 @@ services:
       start_period: 5s
 
   gateway:
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+#    build:
+#      context: ./gateway
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -237,14 +247,14 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "gateway"
-      TOKEN_LIFETIME: "300"
-      TOKEN_SECRET_FILE: "/run/secrets/token_secret"
+#      TOKEN_LIFETIME: "300"
+#      TOKEN_SECRET_FILE: "/run/secrets/token_secret"
 #      ADMIN_SECRET_FILE: "/run/secrets/admin_secret"
       EXTERNAL_SERVICE_URL: "http://host.docker.internal:4567"
     env_file:
       - .env
-    secrets:
-      - token_secret
+#    secrets:
+#      - token_secret
     networks:
       db-net:
       common-net:
@@ -253,9 +263,10 @@ services:
       - "host.docker.internal:host-gateway"
 
   operation:
-    build:
-      context: ./operation
-      dockerfile: Dockerfile
+#    build:
+#      context: ./operation
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     expose:
       - "8080"
     depends_on:
@@ -286,9 +297,10 @@ services:
       start_period: 15s
 
   notificator:
-    build:
-      context: ./notificator
-      dockerfile: Dockerfile
+#    build:
+#      context: ./notificator
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     expose:
       - "8080"
     depends_on:
@@ -311,9 +323,10 @@ services:
       - common-net
 
   account:
-    build:
-      context: ./account
-      dockerfile: Dockerfile
+#    build:
+#      context: ./account
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     expose:
       - "8080"
     depends_on:
@@ -337,11 +350,11 @@ services:
       - SPRING_APPLICATION_NAME=account
       - HAZELCAST_SERVER_ADDRESSES=${HAZELCAST_SERVER_ADDRESSES}
       - TOKEN_LIFETIME=300
-      - TOKEN_SECRET_FILE=/run/secrets/token_secret
+#      - TOKEN_SECRET_FILE=/run/secrets/token_secret
     env_file:
       - .env
-    secrets:
-      - token_secret
+#    secrets:
+#      - token_secret
     networks:
       - db-net
       - common-net
@@ -353,9 +366,10 @@ services:
       start_period: 5s
 
   bill:
-    build:
-      context: ./bill
-      dockerfile: Dockerfile
+#    build:
+#      context: ./bill
+#      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX}/config:${APP_VERSION}
     expose:
       - "8080"
     depends_on:

@@ -28,25 +28,45 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.UriTemplate;
 
+import com.github.irybov.gateway.TokenConfig;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Mono;
 
 @Component
 public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
 
+	private String secret;
+	private static final UriTemplate ACCOUNT_URI_TEMPLATE = new UriTemplate("/accounts/{phone}");
 //	@Autowired
 //	private Environment env;
-	@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}")
-	private String secretFile;
-	
-	public AuthorizationHeaderFilter() {super(Config.class);}
+//	@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}")
+//	private String secretFile;
+/*	
+	public AuthorizationHeaderFilter(@Value("${TOKEN_SECRET_FILE:/run/secrets/token_secret}") String secretFile) {
+		super(Config.class);
+		try {
+			this.secret = Files.readString(Path.of(secretFile)).stripTrailing();
+		}
+		catch (IOException e) {
+			throw new IllegalStateException("Failed to read token secret from " + secretFile, e);
+		}
+		if (this.secret.isBlank()) {
+			throw new IllegalStateException("Token secret file is empty: " + secretFile);
+		}
+	}
+*/
+	public AuthorizationHeaderFilter(TokenConfig tokenConfig) {
+		super(Config.class);
+		this.secret = tokenConfig.getSecret();
+	}
 	
 	static class Config {
-		
 		private List<String> authorities;
 		public List<String> getAuthorities() {return authorities;}
 		public void setAuthorities(String authorities) {
@@ -60,14 +80,14 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 	@Override
 	public GatewayFilter apply(Config config) {
 		return (exchange, chain) -> {
-			
+/*			
 			String secret = null;
 			try {
 				secret = Files.readString(Path.of(secretFile)).stripTrailing();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+*/			
 			ServerHttpRequest request = exchange.getRequest();
 			if(!request.getHeaders().containsHeader(HttpHeaders.AUTHORIZATION)) {
 				return onError(exchange, "No authorization header",HttpStatus.UNAUTHORIZED);
@@ -76,8 +96,9 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
 			String jwt = authorizationHeader.replace("Bearer", "").trim();
 			
 			String path = request.getURI().getPath();
-			UriTemplate uriTemplate = new UriTemplate("/accounts/{phone}");
-			Map<String, String> variables = uriTemplate.match(path);
+//			UriTemplate uriTemplate = new UriTemplate("/accounts/{phone}");
+			Map<String, String> variables = ACCOUNT_URI_TEMPLATE.match(path);
+//			Map<String, String> variables = uriTemplate.match(path);
 			if(!variables.isEmpty()) {
 				String phone = variables.get("phone");
 				if(checkFraud(phone, jwt, secret)) 

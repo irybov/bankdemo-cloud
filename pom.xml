@@ -82,12 +82,12 @@
                         </to>
                         <container>
                             <workingDirectory>/app</workingDirectory>
-                            <entrypoint>INHERIT</entrypoint>
+<!--                            <entrypoint>INHERIT</entrypoint>
                             <args>
                                 <arg>java</arg>
                                 <arg>-jar</arg>
                                 <arg>app.jar</arg>
-                            </args>
+                            </args>-->
                         </container>
                     </configuration>
                 </plugin>

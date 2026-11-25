@@ -59,7 +59,9 @@ import com.github.irybov.shared.BillDTO;
 public class AccountServiceTest {
 	
 	@Mock
-	private Environment env;
+	private TokenConfig tokenConfig;
+//	@Mock
+//	private Environment env;
 //	@Mock
 //	private Validator validator;
 	@Mock
@@ -82,9 +84,9 @@ public class AccountServiceTest {
 	void prepare() {
 		
 		MockitoAnnotations.openMocks(this);
-		service = new AccountService(env, billClient, mapStruct, jdbc, txOps);
+		service = new AccountService(tokenConfig, billClient, mapStruct, jdbc, txOps);
 		ReflectionTestUtils.setField(service, "self", self);
-		ReflectionTestUtils.setField(service, "secretFile", "src/test/resources/token_secret.txt");
+//		ReflectionTestUtils.setField(service, "secretFile", "src/test/resources/token_secret.txt");
 		
 		account = new Account();
 		account.setId(0);
@@ -132,7 +134,9 @@ public class AccountServiceTest {
 	void can_generate_token() {
 		
 //		when(env.getProperty("token.secret")).thenReturn("1jqjnzVw3RKoCFhldHn19GoODxI758LxTkNeBBeXxYw=");
-		when(env.getProperty("token.lifetime")).thenReturn("300");
+		when(tokenConfig.getSecret()).thenReturn("1jqjnzVw3RKoCFhldHn19GoODxI758LxTkNeBBeXxYw=");
+//		when(env.getProperty("token.lifetime")).thenReturn("300");
+		when(tokenConfig.getTokenLifetimeSeconds()).thenReturn(300L);
 //		when(jdbc.findByPhone(anyString())).thenReturn(account);
 		when(self.getAccount(anyString())).thenReturn(account);
 		
@@ -142,7 +146,9 @@ public class AccountServiceTest {
 //		verify(jdbc).findByPhone(anyString());
 		verify(self).getAccount(anyString());
 //		verify(env).getProperty("token.secret");
-		verify(env).getProperty("token.lifetime");
+		verify(tokenConfig).getSecret();
+//		verify(env).getProperty("token.lifetime");
+		verify(tokenConfig).getTokenLifetimeSeconds();
 	}
 	
 	@Test

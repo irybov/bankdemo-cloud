@@ -86,6 +86,8 @@ public class AppIT {
 	private ObjectMapper mapper;
 	@Autowired
 	private Environment env;
+	@Autowired
+	private TokenConfig tokenConfig;
 	
 	@Value("${app.internal-url}")
 	private String internalURL;
@@ -123,7 +125,7 @@ public class AppIT {
 	
 	private String generateJWT(Set<String> scopes, String phone, boolean active) {
 		
-		SecretKey key = Keys.hmacShaKeyFor(env.getProperty("token.secret").getBytes());
+		SecretKey key = Keys.hmacShaKeyFor(tokenConfig.getSecret().getBytes());
 		Instant now = Instant.now();
 		String token = Jwts.builder()
 				.claim("scope", scopes)

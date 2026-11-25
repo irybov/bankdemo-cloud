@@ -18,6 +18,7 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Sql("/test-outbox-data-h2.sql")
 @DataJdbcTest
+@TestPropertySource(properties = "spring.config.location=classpath:/")
 @Import({BillOutboxRelay.class, JacksonAutoConfiguration.class})
 class OperationOutboxRepoTest {
 	
